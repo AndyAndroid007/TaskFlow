@@ -1,7 +1,7 @@
 const userRepository = require("../repositories/user.repository");
 const ApiError = require("../exceptions/ApiError");
-const mongoose = require("mongoose")
-
+const mongoose = require("mongoose");
+const bcrypt = require("bcrypt");
 const getAllUsers = async () => {
     return await userRepository.findAll();
 }
@@ -18,6 +18,12 @@ const getUserById = async(id) => {
 }
 
 const createUser = async (userData) => {
+    const existingUser = await userRepository.findByEmail(userData.email);
+    if (existingUser) {
+        throw new ApiError(409, "Email is already associated with an existing user.");
+    }
+    const hashpass = await bcrypt.hash(userData.password, 10);
+    userData.password = hashpass;
     return await userRepository.create(userData);
 }
 
