@@ -9,11 +9,11 @@ const getTaskById = async(taskId) => {
 };
 
 const updateTask = async(id, updatedData) => {
-    return await Task.findByIdAndUpdate(id, updatedData, {new: True});
+    return await Task.findByIdAndUpdate(id, updatedData, {new: true});
 };
 
 const createTask = async (taskData) => {
-    return await Task.create(data);
+    return await Task.create(taskData);
 };
 
 const deleteTask = async (id) => {

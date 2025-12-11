@@ -3,7 +3,7 @@ const ApiError = require("../exceptions/ApiError");
 const taskRepo = require("../repositories/task.repository");
 
 const createTask = async (userId, data) => {
-    return await taskRepo.createTask(...data, userId);
+    return await taskRepo.createTask({...data, userId});
 };
 
 const getTaskById = async (userId, taskId) => {
@@ -30,7 +30,7 @@ const updateTask = async (userId, taskId, updatedData) => {
 }
 
 const deleteTask = async (userId, taskId) => {
-    const task = getTaskById(userId, taskId);
+    const task = await getTaskById(userId, taskId);
     return await taskRepo.deleteTask(taskId);
 } 
 
