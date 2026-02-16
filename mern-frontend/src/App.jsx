@@ -1,7 +1,11 @@
 import LoginPage from "./pages/LoginPage.jsx";
+import NavBar from "./components/ui/NavBar.jsx";
 function App() {
   return (
-    <LoginPage />
+    <>
+    {/* <LoginPage /> */}
+    <NavBar/>
+    </>
   );
 }
 
