@@ -19,7 +19,7 @@ function TaskCard({ task, onEdit, onDelete }) {
             </div>
             {/* Delete Button */}
             <button
-                className="absolute top-2 right-2 text-red-500 hover:text-red-700 transition"
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700 transition cursor-pointer"
                 onClick={(e) => {
                     e.stopPropagation(); // Prevent triggering onEdit
                     onDelete();
@@ -28,7 +28,7 @@ function TaskCard({ task, onEdit, onDelete }) {
                 🗑️
             </button>
             {/* Badge */}
-            <div className={`absolute bottom-2 right-2 px-3 py-1 text-xs font-semibold rounded-full ${completed ? 'bg-green-500 text-white' : 'bg-yellow-500 text-black'
+            <div className={`absolute bottom-2 right-2 px-3 py-1 text-xs font-semibold rounded-full ${completed ? 'bg-green-500 text-white/90' : 'bg-yellow-500 text-black'
                 }`}>
                 {completed ? 'Completed' : 'Pending'}
             </div>
