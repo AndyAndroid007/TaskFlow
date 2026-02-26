@@ -20,8 +20,8 @@ function App() {
 }
 } onEdit={()=> console.log("edit")} onDelete={()=>console.log("delete")}></TaskCard>
      */}
-     {<Dashboard />}
-     {/* {TaskSidedraw(true, null)}  */}
+     {/* {<Dashboard />} */}
+     {TaskSidedraw(true, null)} 
     </>
   );
 }
