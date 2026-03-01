@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function TaskSidedraw({ action, task, onClose }) {
+function TaskSidedraw({ action, task, onClose, onSave, onUpdate }) {
     // Step 1: Create local state for the form
     const [title, setTitle] = useState(task ? task.title : "");
     const [description, setDescription] = useState(task ? task.description : "");
@@ -24,7 +24,15 @@ function TaskSidedraw({ action, task, onClose }) {
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-4">
-                    <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); console.log({ title, description, completed }) }}>
+                    <form className="flex flex-col gap-4" onSubmit={(e) => {
+                        e.preventDefault();
+                        const taskData = { title, description, completed };
+                        if (action === "add") {
+                            onSave(taskData);
+                        } else {
+                            onUpdate(task._id, taskData);
+                        }
+                    }}>
 
                         {/* Title */}
                         <div className="flex flex-col gap-1">

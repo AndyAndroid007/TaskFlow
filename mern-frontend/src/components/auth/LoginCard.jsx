@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { login, signup } from "../../api/auth";
-function LoginCard() {
+function LoginCard({onSuccess}) {
     const [isNewUser, setIsNewUser] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState("");
@@ -14,10 +14,8 @@ function LoginCard() {
         try {
             const data = isNewUser ? await signup (email, password) :
             await login (email, password);
-
+            onSuccess(data);
             console.log("Success:", data);
-            localStorage.setItem("token",data.token);
-            localStorage.setItem("user", JSON.stringify(data.user));
 
             setEmail("");
             setPassword("");

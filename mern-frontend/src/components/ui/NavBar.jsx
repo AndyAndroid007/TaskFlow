@@ -1,5 +1,5 @@
 import { useState } from "react";
-function NavBar() {
+function NavBar({onLogout}) {
     const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
     return (
         <div className="flex justify-between items-center p-4 bg-zinc-900">
@@ -17,7 +17,11 @@ function NavBar() {
                 {avatarMenuOpen && (
                     <div className="flex flex-col absolute right-0 mt-2 w-44 bg-zinc-800 rounded-xl border border-zinc-700">
                         <button className="w-full text-left text-white/80 text-md hover:text-white/100 px-4 py-2">Profile</button>
-                        <button className="w-full text-left text-red-500/80 text-md hover:text-red-500/100 px-4 py-2">Logout</button>
+                        <button 
+                        onClick = {() => {onLogout(); setAvatarMenuOpen(false);} } 
+                        className="w-full text-left text-red-500/80 text-md hover:text-red-500/100 px-4 py-2">
+                            Logout
+                        </button>
                     </div>
                 )}
             </div>

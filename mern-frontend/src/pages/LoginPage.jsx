@@ -1,5 +1,14 @@
 import LoginCard from "../components/auth/LoginCard";
+import {useNavigate} from "react-router-dom";
 function LoginPage() {
+    const navigate = useNavigate();
+    const handleSuccess = (data) => {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        
+        navigate("/dashboard");
+
+    };
     return (
         <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-white">
             {/*Left Section*/}
@@ -14,7 +23,7 @@ function LoginPage() {
                 </div>
             </div>
             <div className="w-full lg:w-1/2 flex items-center justify-center">
-                <LoginCard />
+                <LoginCard onSuccess = {handleSuccess}/>
             </div>
         </div>
     );
