@@ -27,3 +27,5 @@ mcp-server/
 .env
 *.md
 .lightning_studio/
+.mcp.json
+start-dev.sh
