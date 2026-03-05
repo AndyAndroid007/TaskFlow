@@ -25,7 +25,8 @@ dist-ssr
 *.bin
 mcp-server/
 .env
-*.md
+CLAUDE.md
+start-dev.md
 .lightning_studio/
 .mcp.json
 start-dev.sh

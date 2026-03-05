@@ -1,0 +1,21 @@
+{
+    "mcpServers": {
+        "postman": {
+            "url": "https://mcp.postman.com/sse",
+            "headers": {
+                "Authorization": "Bearer REPLACE_WITH_YOUR_POSTMAN_API_KEY"
+            }
+        },
+        "mern-demo": {
+            "command": "node",
+            "args": [
+                "/absolute/path/to/your/project/MERN-Demo-App/mcp-server/index.js"
+            ],
+            "env": {
+                "MCP_USER_EMAIL": "REPLACE_WITH_YOUR_DEV_EMAIL",
+                "MCP_USER_PASSWORD": "REPLACE_WITH_YOUR_DEV_PASSWORD",
+                "MCP_JWT_TOKEN": ""
+            }
+        }
+    }
+}
