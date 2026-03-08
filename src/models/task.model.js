@@ -13,15 +13,33 @@ const taskSchema = new mongoose.Schema(
         },
 
         completed: {
-            type: Boolean,
-            default: false
+            type: String,
+            default: ""
         },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true
 
+        },
+        priority: {
+            type: Number,
+
+        },
+        dueDate: {
+            type: Date,
+            default: Date.now
+        },
+        tags: {
+            type: [String],
+            default: []
+        },
+        assignee: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true
         }
+
     },
     {
         timestamps: true
