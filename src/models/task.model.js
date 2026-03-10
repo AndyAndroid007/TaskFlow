@@ -12,9 +12,9 @@ const taskSchema = new mongoose.Schema(
             default: ""
         },
 
-        completed: {
+        status: {
             type: String,
-            default: ""
+            default: "Open"
         },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -23,8 +23,8 @@ const taskSchema = new mongoose.Schema(
 
         },
         priority: {
-            type: Number,
-
+            type: String,
+            default: "Low"
         },
         dueDate: {
             type: Date,
