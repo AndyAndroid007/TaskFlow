@@ -1,8 +1,7 @@
-import { API_BASE_URL } from "./config";
-
+import { customFetch } from "./apiClient";
 export const getUsers = async () => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`${API_BASE_URL}/users`, {
+    const res = await customFetch(`/users`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",

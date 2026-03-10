@@ -1,6 +1,6 @@
-import {API_BASE_URL} from "./config";
+import { customFetch } from "./apiClient";
 export const login = async (email, password) => {
-    const res = await fetch(`${API_BASE_URL}/auth/login`,
+    const res = await customFetch(`/auth/login`,
         {
             method: "POST",
             headers: {"Content-Type" : "application/json"},
@@ -13,7 +13,7 @@ export const login = async (email, password) => {
         return res.json();
 };
 export const signup = async (email, password) => {
-    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    const res = await customFetch(`/auth/register`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({email, password}),

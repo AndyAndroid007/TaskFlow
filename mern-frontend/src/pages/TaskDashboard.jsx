@@ -1,112 +1,26 @@
-import {useState, useEffect} from 'react';
-import {Navigate, useNavigate} from "react-router-dom";
+import { useState, useEffect } from 'react';
+import { Navigate, useNavigate } from "react-router-dom";
 import Navbar from '../components/ui/NavBar';
 import Dashboard from '../pages/Dashboard';
 import TaskSidedraw from './TaskSidedraw';
-import {getTasks, addTask, editTask, deleteTask} from "../api/task";
-// const mockTasks = [
-//     {
-//         _id: "507f1f77bcf86cd799439011",
-//         title: "Complete project documentation",
-//         description: "Write comprehensive documentation for the MERN stack project including setup instructions and API endpoints",
-//         completed: false,
-//         createdAt: new Date("2026-02-15T10:30:00Z"),
-//         updatedAt: new Date("2026-02-15T10:30:00Z"),
-//         __v: 0
-//     },
-//     {
-//         _id: "507f1f77bcf86cd799439012",
-//         title: "Fix login authentication bug",
-//         description: "Resolve the issue with JWT token validation in the authentication middleware",
-//         completed: true,
-//         createdAt: new Date("2026-02-14T14:20:00Z"),
-//         updatedAt: new Date("2026-02-16T09:45:00Z"),
-//         __v: 0
-//     },
-//     {
-//         _id: "507f1f77bcf86cd799439013",
-//         title: "Implement task filtering",
-//         description: "Add functionality to filter tasks by completion status and creation date",
-//         completed: false,
-//         createdAt: new Date("2026-02-13T16:15:00Z"),
-//         updatedAt: new Date("2026-02-13T16:15:00Z"),
-//         __v: 0
-//     },
-//     {
-//         _id: "507f1f77bcf86cd799439014",
-//         title: "Update UI components",
-//         description: "Redesign TaskCard component with better styling and responsive layout",
-//         completed: false,
-//         createdAt: new Date("2026-02-12T11:00:00Z"),
-//         updatedAt: new Date("2026-02-17T13:30:00Z"),
-//         __v: 0
-//     },
-//     {
-//         _id: "507f1f77bcf86cd799439015",
-//         title: "Set up automated testing",
-//         description: "Configure Jest and React Testing Library for unit and integration tests",
-//         completed: true,
-//         createdAt: new Date("2026-02-11T08:45:00Z"),
-//         updatedAt: new Date("2026-02-14T12:20:00Z"),
-//         __v: 0
-//     },
-//     {
-//         _id: "507f1f77bcf86cd799439016",
-//         title: "Optimize database queries",
-//         description: "Review and optimize MongoDB queries for better performance and add proper indexing",
-//         completed: false,
-//         createdAt: new Date("2026-02-10T15:30:00Z"),
-//         updatedAt: new Date("2026-02-10T15:30:00Z"),
-//         __v: 0
-//     },
-//     {
-//         _id: "507f1f77bcf86cd799439017",
-//         title: "Add error handling",
-//         description: "Implement comprehensive error handling across all API endpoints and frontend components",
-//         completed: false,
-//         createdAt: new Date("2026-02-09T12:15:00Z"),
-//         updatedAt: new Date("2026-02-18T10:00:00Z"),
-//         __v: 0
-//     },
-//     {
-//         _id: "507f1f77bcf86cd799439018",
-//         title: "Create user profile page",
-//         description: "Design and implement a user profile page with edit functionality and avatar upload",
-//         completed: true,
-//         createdAt: new Date("2026-02-08T09:20:00Z"),
-//         updatedAt: new Date("2026-02-15T14:50:00Z"),
-//         __v: 0
-//     },
-//     {
-//         _id: "507f1f77bcf86cd799439019",
-//         title: "Deploy to production",
-//         description: "Set up production environment on AWS with proper CI/CD pipeline and monitoring",
-//         completed: false,
-//         createdAt: new Date("2026-02-07T17:40:00Z"),
-//         updatedAt: new Date("2026-02-07T17:40:00Z"),
-//         __v: 0
-//     },
-//     {
-//         _id: "507f1f77bcf86cd799439020",
-//         title: "Code review and refactoring",
-//         description: "Conduct thorough code review and refactor components for better maintainability and performance",
-//         completed: false,
-//         createdAt: new Date("2026-02-06T13:25:00Z"),
-//         updatedAt: new Date("2026-02-16T16:10:00Z"),
-//         __v: 0
-//     }
-// ];
+import { getTasks, addTask, editTask, deleteTask } from "../api/task";
+import AlertBox from '../components/ui/AlertBox';
 
-function TaskDashboard () {
+function TaskDashboard() {
     const [isOpen, setIsOpen] = useState(false);
     const [action, setAction] = useState("add");
     const [selectedTask, setSelectedTask] = useState(null);
     const [tasks, setTasks] = useState([]);
+    const [alertInfo, setAlertInfo] = useState({
+        show: false,
+        description: "",
+        type: ""
+    });
 
     const navigate = useNavigate();
     const token = localStorage.getItem("token");
     if (!token) {
-        return <Navigate to = "/" replace />;   
+        return <Navigate to="/" replace />;
     }
 
     useEffect(() => {
@@ -116,6 +30,7 @@ function TaskDashboard () {
                 setTasks(data);
             } catch (err) {
                 console.error("Error fetching tasks:", err);
+                triggerAlert(err.message, "warning");
             }
         };
         fetchTasks();
@@ -126,8 +41,10 @@ function TaskDashboard () {
             const newTask = await addTask(task);
             setTasks(prev => [...prev, newTask]);
             setIsOpen(false);
+            triggerAlert("Task Created Successfully", "success");
         } catch (err) {
             console.error("Error adding task:", err);
+            triggerAlert(err.message, "error");
         }
     };
 
@@ -136,8 +53,10 @@ function TaskDashboard () {
             const updatedTask = await editTask(id, taskData);
             setTasks(prev => prev.map(t => t._id === updatedTask._id ? updatedTask : t));
             setIsOpen(false);
+            triggerAlert("Task Updated Successfully", "success");
         } catch (err) {
             console.error("Error editing task:", err);
+            triggerAlert(err.message, "error");
         }
     };
 
@@ -145,9 +64,26 @@ function TaskDashboard () {
         try {
             await deleteTask(task._id);
             setTasks(prev => prev.filter(t => t._id !== task._id));
-        } catch (error) {
-            console.error("Error deleting task:", error);
+            triggerAlert("Task Deleted Successfully", "success");
+        } catch (err) {
+            console.error("Error deleting task:", err);
+            triggerAlert(err.message, "error");
         }
+    }
+
+    const triggerAlert = (description, type) => {
+        setAlertInfo({
+            show: true,
+            description: description,
+            type: type
+        });
+        setTimeout(() => {
+            setAlertInfo({
+                show: false,
+                description: "",
+                type: ""
+            });
+        }, 3000);
     }
 
     const openAddDrawer = () => {
@@ -170,8 +106,13 @@ function TaskDashboard () {
 
     return (
         <>
-            <Navbar onLogout = {handleLogout}/>
-            <Dashboard onAdd={openAddDrawer} onEdit={openEditDrawer} onDelete = {handleDeleteTask} tasks={tasks} />
+            <Navbar onLogout={handleLogout} />
+            {alertInfo.show &&
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-[90%] sm:w-auto sm:min-w-[300px] flex justify-center">
+                    <AlertBox description={alertInfo.description} type={alertInfo.type} />
+                </div>
+            }
+            <Dashboard onAdd={openAddDrawer} onEdit={openEditDrawer} onDelete={handleDeleteTask} tasks={tasks} />
             {isOpen && (
                 <TaskSidedraw
                     action={action}
@@ -179,6 +120,7 @@ function TaskDashboard () {
                     onClose={() => setIsOpen(false)}
                     onSave={handleAddTask}
                     onUpdate={handleEditTask}
+                    triggerAlert={triggerAlert}
                 />
             )}
         </>

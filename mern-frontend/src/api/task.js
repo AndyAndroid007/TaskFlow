@@ -1,7 +1,7 @@
-import {API_BASE_URL} from "./config";
+import { customFetch } from "./apiClient";
 const getTasks = async () => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`${API_BASE_URL}/tasks`,
+    const res = await customFetch(`/tasks`,
         {
             method: "GET",
             headers: {
@@ -17,7 +17,7 @@ const getTasks = async () => {
 };
 const addTask = async (newTask) => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`${API_BASE_URL}/tasks`, {
+    const res = await customFetch(`/tasks`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -35,7 +35,7 @@ const addTask = async (newTask) => {
 
 const editTask = async(id, updatedTask) => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+    const res = await customFetch(`/tasks/${id}`, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json",
@@ -53,7 +53,7 @@ const editTask = async(id, updatedTask) => {
 
 const deleteTask  = async (taskId) => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`${API_BASE_URL}/tasks/${taskId}`, {
+    const res = await customFetch(`/tasks/${taskId}`, {
         method: "DELETE",
         headers:
         {

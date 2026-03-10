@@ -1,4 +1,9 @@
 import { useState } from "react";
+function ExtractUserName () {
+    const user = JSON.parse(localStorage.getItem("user")) || {};
+    return (user.name || "").split(" ").map(word => word[0]).join("").toUpperCase().substring(0,2) || "";
+
+}
 function NavBar({onLogout}) {
     const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
     return (
@@ -11,7 +16,7 @@ function NavBar({onLogout}) {
             <div className="relative">
                 {/*Avatar Menu*/}
                 <div className="flex items-center justify-center text-zinc-300/80 w-8 h-8 rounded-full bg-zinc-700 border border-white/10 cursor-pointer hover:text-zinc-300/100 transition-colors duration-200" onClick={() => setAvatarMenuOpen((prev) => !prev)}>
-                    UI
+                    {ExtractUserName()}
                 </div>
                 {/*/Dropdown Menu*/}
                 {avatarMenuOpen && (

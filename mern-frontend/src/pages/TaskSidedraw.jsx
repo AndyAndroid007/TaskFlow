@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { getUsers } from "../api/user";
 
-function TaskSidedraw({ action, task, onClose, onSave, onUpdate }) {
+function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert }) {
     // Form States
     const [title, setTitle] = useState(task?.title || "");
     const [description, setDescription] = useState(task?.description || "");
@@ -43,6 +43,12 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        if (!title.trim() || !assignee || !dueDate) {
+            triggerAlert("Please fill in all mandatory fields!", "error");
+            return;
+        }
+
         const taskData = {
             title,
             description,
@@ -82,13 +88,12 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate }) {
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
-                    <form id="task-form" className="flex flex-col gap-5" onSubmit={handleSubmit}>
+                    <form id="task-form" className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
 
                         {/* Title */}
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-medium text-white/80">Title</label>
+                            <label className="text-sm font-medium text-white/80">Title <span className="text-red-400">*</span></label>
                             <input
-                                required
                                 type="text"
                                 className="w-full px-3 py-2.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-white focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-colors"
                                 value={title}
@@ -159,7 +164,6 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate }) {
                                         className="w-full px-3 py-2.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-white focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 appearance-none pr-10"
                                         value={assignee}
                                         onChange={(e) => setAssignee(e.target.value)}
-                                        required
                                     >
                                         <option value="" disabled>Select User</option>
                                         {users.map(user => (
@@ -176,7 +180,7 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate }) {
 
                             {/* Due Date */}
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium text-white/80">Due Date</label>
+                                <label className="text-sm font-medium text-white/80">Due Date <span className="text-red-400">*</span></label>
                                 <input
                                     type="date"
                                     className="w-full px-3 py-2.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-white/60 focus:text-white focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-colors uppercase [color-scheme:dark]"
