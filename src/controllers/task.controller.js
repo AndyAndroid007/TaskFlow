@@ -2,7 +2,7 @@ const taskService = require("../services/task.service");
 
 const createTask = async (req,res,next) => {
     try {
-        const task = await taskService.createTask(req.user.userId, req.body);
+        const task = await taskService.createTask(req.user.userId, { ...req.body, correlationId: req.correlationId });
         res.status(201).json(task);
     } catch (err) {
         next(err);
@@ -29,7 +29,7 @@ const getTaskById = async (req,res,next) => {
 
 const updateTask = async (req,res,next) => {
     try {
-        const taskUpdate = await taskService.updateTask(req.user.userId, req.params.id, req.body);
+        const taskUpdate = await taskService.updateTask(req.user.userId, req.params.id, { ...req.body, correlationId: req.correlationId });
         res.json(taskUpdate);
     } catch (err) {
         next(err);
@@ -38,7 +38,8 @@ const updateTask = async (req,res,next) => {
 
 const deleteTask = async (req,res,next) => {
     try {
-        const taskDelete = await taskService.deleteTask(req.user.userId, req.params.id);
+        // We pass an object containing correlationId as the third parameter to deleteTask in service
+        const taskDelete = await taskService.deleteTask(req.user.userId, req.params.id, req.correlationId);
         res.json({message: "Task Deleted Successfully"});
     } catch (err) {
         next(err);

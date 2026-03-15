@@ -2,13 +2,24 @@ require("dotenv").config();
 const app = require('./app');
 const connectDB = require('./config/db');
 const logger = require('./utils/logger');
+const { connectProducer } = require('./infrastructure/kafka/producer');
+const { initTopics } = require('./infrastructure/kafka/admin');
+const { initAnalyticsConsumer } = require('./modules/analytics/analytics.consumer');
 
 connectDB();
 
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, "0.0.0.0", async () => {
     logger.info(`Server running on port ${PORT}`, { env: process.env.NODE_ENV || 'development' });
+    
+    try {
+        await connectProducer();
+        await initTopics();
+        initAnalyticsConsumer();
+    } catch (error) {
+        logger.warn('Could not connect to Kafka. Running without event streaming.');
+    }
 });
 
 // Handle unhandled promise rejections
