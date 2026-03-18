@@ -1196,23 +1196,23 @@ mern-frontend/cypress/
   - [ ] Update login page UI with OAuth buttons + divider ("or sign in with")
 - [ ] Update `CLAUDE.md` — reflect current feature status
 
-### Phase 3: Kafka Integration ❌ NOT STARTED
+### Phase 3: Kafka Integration ✅ DONE
 
-- [ ] Set up Docker Compose (Kafka + Zookeeper + MongoDB)
-- [ ] Install `kafkajs` dependency
-- [ ] Create `infrastructure/kafka/kafkaClient.js` — KafkaJS client singleton (env-agnostic)
-- [ ] Create `infrastructure/kafka/producer.js` — generic producer wrapper
-- [ ] Create `infrastructure/kafka/consumer.js` — generic consumer wrapper
-- [ ] Define topic constants in `infrastructure/kafka/topics.js`
-- [ ] Add Kafka event production to `task.service.js` for:
+- [x] Set up Docker Compose (Kafka using KRaft)
+- [x] Install `kafkajs` dependency
+- [x] Create `infrastructure/kafka/kafkaClient.js` — KafkaJS client singleton (env-agnostic)
+- [x] Create `infrastructure/kafka/producer.js` — generic producer wrapper
+- [x] Create `infrastructure/kafka/consumer.js` — generic consumer wrapper
+- [x] Define topic constants in `infrastructure/kafka/topics.js` (taskEvents)
+- [x] Add Kafka event production to `task.service.js` for:
   - `task.created` on createTask
   - `task.updated` on updateTask
   - `task.completed` on status change to "Completed"
   - `task.deleted` on deleteTask
-- [ ] Create `modules/notifications/notification.consumer.js`
-- [ ] Create `modules/analytics/analytics.consumer.js`
-- [ ] Wire consumer startup in `server.js`
-- [ ] Add Kafka connection/error logging
+- [x] Create `modules/notifications/notification.consumer.js`
+- [x] Create `modules/analytics/analytics.consumer.js`
+- [x] Wire consumer startup in `server.js` (added topic auto-creation script)
+- [x] Add Kafka connection/error logging
 
 ### Phase 4: Reliability Mechanisms ❌ NOT STARTED
 

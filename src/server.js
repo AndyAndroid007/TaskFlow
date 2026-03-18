@@ -5,6 +5,7 @@ const logger = require('./utils/logger');
 const { connectProducer } = require('./infrastructure/kafka/producer');
 const { initTopics } = require('./infrastructure/kafka/admin');
 const { initAnalyticsConsumer } = require('./modules/analytics/analytics.consumer');
+const { initNotificationConsumer} = require('./modules/notifications/notification.consumer');
 
 connectDB();
 
@@ -17,6 +18,7 @@ app.listen(PORT, "0.0.0.0", async () => {
         await connectProducer();
         await initTopics();
         initAnalyticsConsumer();
+        initNotificationConsumer();
     } catch (error) {
         logger.warn('Could not connect to Kafka. Running without event streaming.');
     }

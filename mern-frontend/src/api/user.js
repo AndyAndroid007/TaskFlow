@@ -1,17 +1,5 @@
-import { customFetch } from "./apiClient";
+import  apiClient from "./apiClient";
 export const getUsers = async () => {
-    const token = localStorage.getItem("token");
-    const res = await customFetch(`/users`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-        }
-    });
-
-    if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to fetch users. Please try again.");
-    }
-    return res.json();
+    const res = await apiClient.get('/users');
+    return res;
 };
