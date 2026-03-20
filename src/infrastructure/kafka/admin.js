@@ -1,6 +1,7 @@
 const kafka = require('./kafkaClient');
 const logger = require('../../utils/logger');
 const { TOPICS } = require('../../events/taskEvents');
+const { DLQ_TOPICS } = require('../../events/dlqTopics');
 
 const initTopics = async () => {
     const admin = kafka.admin();
@@ -9,7 +10,7 @@ const initTopics = async () => {
         logger.info('Kafka Admin connected. Initializing topics...');
         
         const existingTopics = await admin.listTopics();
-        const topicsToCreate = Object.values(TOPICS)
+        const topicsToCreate = [...Object.values(TOPICS),...Object.values(DLQ_TOPICS)]
             .filter(topic => !existingTopics.includes(topic))
             .map(topic => ({ topic }));
 

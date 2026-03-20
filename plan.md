@@ -1214,16 +1214,16 @@ mern-frontend/cypress/
 - [x] Wire consumer startup in `server.js` (added topic auto-creation script)
 - [x] Add Kafka connection/error logging
 
-### Phase 4: Reliability Mechanisms ❌ NOT STARTED
+### Phase 4: Reliability Mechanisms ✅ COMPLETED
 
-- [ ] Add `eventId` (UUID) to all Kafka event payloads
-- [ ] Create `ProcessedEvent` model with TTL index
-- [ ] Implement idempotent consumer wrapper (check eventId before processing)
-- [ ] Add retry logic with exponential backoff (1s → 5s → 30s)
-- [ ] Create dead-letter topics (`*.dlq`)
-- [ ] Implement DLQ producer (move failed events after max retries)
-- [ ] Log all retry attempts and DLQ moves at `warn` level
-- [ ] Test duplicate event handling
+- [x] Add `eventId` (UUID) to all Kafka event payloads — ✅ Already implemented in `buildEvent()`
+- [x] Create `ProcessedEvent` model with TTL index
+- [x] Implement idempotent consumer wrapper (check eventId before processing)
+- [x] Add retry logic with exponential backoff (1s → 5s → 30s)
+- [x] Create dead-letter topics (`*.dlq`)
+- [x] Implement DLQ producer (move failed events after max retries)
+- [x] Log all retry attempts and DLQ moves at `warn` level
+- [x] Test duplicate event handling
 
 ### Phase 5: Real-Time Notifications ❌ NOT STARTED
 

@@ -51,7 +51,8 @@ const produceEvent = async (topic, eventPayload) => {
         });
         logger.debug(`Event produced to topic: ${topic}`, {
             eventType: eventPayload.eventType,
-            eventId: eventPayload.eventId
+            eventId: eventPayload.eventId,
+            correlationId: eventPayload.correlationId
         });
     }
     catch (error) {
@@ -66,4 +67,44 @@ const produceEvent = async (topic, eventPayload) => {
     }
 };
 
-module.exports = { connectProducer, disconnectProducer, produceEvent }
+/**
+ * Publishes a failed event to its Dead Letter Queue topic.
+ *
+ * @param {string} originalTopic - The topic the event originally came from
+ * @param {Object} originalEvent - The original event payload that failed
+ * @param {Error} error - The error that caused the failure
+ * @param {number} retryCount - How many retries were attempted
+ */
+const produceToDLQ = async (originalTopic, originalEvent, error, retryCount) => {
+    const dlqTopic = `${originalTopic}.dlq`;
+    const dlqPayload = {
+        originalEvent,
+        error: error.message,
+        stack: error.stack,
+        retryCount,
+        failedAt: new Date().toISOString()
+    };
+
+    try {
+        await producer.send({
+            topic: dlqTopic,
+            messages: [{
+                value: JSON.stringify(dlqPayload)
+            }]
+        });
+        logger.warn(`Event sent to DLQ: ${dlqTopic}`, {
+            eventId: originalEvent.eventId,
+            correlationId: originalEvent.correlationId,
+            retryCount,
+            error: error.message
+        });
+    } catch (dlqError) {
+        logger.error(`CRITICAL: Failed to send event to DLQ: ${dlqTopic}`, {
+            error: dlqError.message,
+            originalEventId: originalEvent.eventId
+        }
+        )
+    }
+}
+
+module.exports = { connectProducer, disconnectProducer, produceEvent, produceToDLQ }

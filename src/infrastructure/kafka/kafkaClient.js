@@ -9,7 +9,7 @@ const brokers = (process.env.KAFKA_BROKERS ||
 const kafka = new Kafka({
     clientId: process.env.KAFKA_CLIENT_ID || 'taskflow-backend',
     brokers: brokers,
-    logLevel: logLevel.DEBUG,
+    logLevel: logLevel.INFO,
     //Custom Logger to bridge KafkaJS logs into Winston
     logCreator: () => {
         return ({

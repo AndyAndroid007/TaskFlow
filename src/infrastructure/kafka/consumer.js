@@ -28,7 +28,8 @@ const startConsumer = async (groupId, topics, onMessage) => {
                 logger.debug(`Message received from topic: ${topic}`, { 
                     partition, 
                     offset: message.offset,
-                    eventId: eventPayload?.eventId
+                    eventId: eventPayload?.eventId,
+                    correlationId: eventPayload.correlationId
                 });
 
                 try {
