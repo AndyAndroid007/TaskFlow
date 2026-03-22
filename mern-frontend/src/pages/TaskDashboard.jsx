@@ -4,9 +4,11 @@ import Navbar from '../components/ui/NavBar';
 import Dashboard from '../pages/Dashboard';
 import TaskSidedraw from './TaskSidedraw';
 import { getTasks, addTask, editTask, deleteTask } from "../api/task";
+import { currentUser } from '../api/auth';
 import AlertBox from '../components/ui/AlertBox';
+import { CheckOAuthToken } from '../utils/OAuthValidator';
 
-function TaskDashboard() {
+function TaskDashboard({ user, setUser }) {
     const [isOpen, setIsOpen] = useState(false);
     const [action, setAction] = useState("add");
     const [selectedTask, setSelectedTask] = useState(null);
@@ -16,12 +18,34 @@ function TaskDashboard() {
         description: "",
         type: ""
     });
+    const [activeToken, setActiveToken] = useState(localStorage.getItem("token"));
 
     const navigate = useNavigate();
     const token = localStorage.getItem("token");
-    if (!token) {
+    const tokenFromURL = new URLSearchParams(window.location.search).get("token");
+    if (!tokenFromURL && !token) {
         return <Navigate to="/" replace />;
     }
+
+    useEffect(() => {
+        CheckOAuthToken();
+        setActiveToken(localStorage.getItem("token"));
+    }, []);
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const data = await currentUser();
+                setUser(data.user);
+                localStorage.setItem("user", JSON.stringify(data.user));
+            } catch (err) {
+                throw new Error(err.message);
+            }
+        }
+        if (activeToken) {
+            fetchUser();
+        }
+    }, [activeToken]);
 
     useEffect(() => {
         const fetchTasks = async () => {
@@ -33,8 +57,10 @@ function TaskDashboard() {
                 triggerAlert(err.message, "warning");
             }
         };
-        fetchTasks();
-    }, []);
+        if (activeToken) {
+            fetchTasks();
+        }
+    }, [activeToken]);
 
     const handleAddTask = async (task) => {
         try {
@@ -106,7 +132,7 @@ function TaskDashboard() {
 
     return (
         <>
-            <Navbar onLogout={handleLogout} />
+            <Navbar user={user} onLogout={handleLogout} />
             {alertInfo.show &&
                 <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-[90%] sm:w-auto sm:min-w-[300px] flex justify-center">
                     <AlertBox description={alertInfo.description} type={alertInfo.type} />

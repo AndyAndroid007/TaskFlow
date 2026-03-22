@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const correlationId = require('./middlewares/correlationId');
+const passport = require('./config/passport');
 const httpLogger = require('./middlewares/httpLogger');
 
 const app = express();
@@ -12,6 +13,7 @@ app.use(cors({
 app.use(correlationId);
 app.use(httpLogger);
 app.use(express.json());
+app.use(passport.initialize());
 
 const userRoutes = require("./routes/user.routes");
 const authRoutes = require("./routes/auth.routes");

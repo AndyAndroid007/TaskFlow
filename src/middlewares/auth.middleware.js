@@ -1,8 +1,9 @@
 const jwt = require("jsonwebtoken");
 const ApiError = require("../exceptions/ApiError");
+const userRepository = require("../repositories/user.repository");
 const logger = require("../utils/logger");
 
-const auth = (req, res, next) => {
+const auth = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
 
@@ -18,7 +19,12 @@ const auth = (req, res, next) => {
         const token = authHeader.split(" ")[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        req.user = { userId: decoded.userId };
+        const user = await userRepository.findById(decoded.userId);
+        if(!user) {
+            throw new ApiError(404, "User Not Found!");
+        }
+
+        req.user = user;
 
         next();
 

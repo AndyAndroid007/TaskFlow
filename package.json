@@ -17,6 +17,8 @@
     "kafkajs": "^2.2.4",
     "mongoose": "^9.0.1",
     "morgan": "^1.10.1",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "uuid": "^13.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"

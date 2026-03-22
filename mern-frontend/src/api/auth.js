@@ -7,3 +7,7 @@ export const signup = async (email, password) => {
     const res = await apiClient.post('/auth/register', {email, password});
     return res;
 };
+export const currentUser = async () => {
+    const res = await apiClient.get('/auth/me');
+    return res;
+}

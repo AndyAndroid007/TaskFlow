@@ -1,32 +1,33 @@
 import { useState } from "react";
 import { login, signup } from "../../api/auth";
-function LoginCard({onSuccess}) {
+import SocialLoginButton from "../ui/SocialLoginButton";
+function LoginCard({ onSuccess }) {
     const [isNewUser, setIsNewUser] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
-    const [error,setError] = useState("");
+    const [error, setError] = useState("");
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError("");
         try {
-            const data = isNewUser ? await signup (email, password) :
-            await login (email, password);
+            const data = isNewUser ? await signup(email, password) :
+                await login(email, password);
             onSuccess(data);
             console.log("Success:", data);
 
             setEmail("");
             setPassword("");
-        } catch(e) {
+        } catch (e) {
             setError(e.message);
         } finally {
             setLoading(false);
         }
 
-        console.log("Submitted Email: ",email)
-        console.log("Submitted Password: ",password);
+        console.log("Submitted Email: ", email)
+        console.log("Submitted Password: ", password);
     };
     return (
         <div className="w-full max-w-md bg-neutral-900 rounded-2xl p-8 border border-blue-500/20 shadow-lg">
@@ -36,7 +37,7 @@ function LoginCard({onSuccess}) {
                     Enter your credentials to access your account
                 </p>
             </div>
-            <form onSubmit = {handleLoginSubmit}>
+            <form onSubmit={handleLoginSubmit}>
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm text-neutral-300 mb-1">Email</label>
@@ -51,19 +52,34 @@ function LoginCard({onSuccess}) {
                     </div>
                 </div>
                 <div className="flex flex-col mt-6 items-center">
-                    <button 
-                    type = "submit" 
-                    className="h-10 rounded-lg bg-blue-600 hover:bg-blue-800 shadow-md w-full"
-                    disabled = {loading}
+                    <button
+                        type="submit"
+                        className="h-10 rounded-lg bg-blue-600 hover:bg-blue-800 shadow-md w-full"
+                        disabled={loading}
                     >
                         {loading ? "Please Wait..." : isNewUser ? "Sign Up" : "Login"}
                     </button>
 
-                    {error && <p className = "text-red-500 text-sm mt-2"> {error}</p>}
+                    {error && <p className="text-red-500 text-sm mt-2"> {error}</p>}
                 </div>
             </form>
-            <div className = "flex flex-col mt-2 items-center">
-            <button className="text-sm text-blue-500 hover:text-blue-600 mt-2" onClick={() => {setIsNewUser(prev => !prev); setPassword(""); setShowPassword(false); setError("");}}>{isNewUser ? "Already have an account? Login" : "New User? Signup first"}</button>
+            <div className="flex flex-col items-center mt-6">
+                <div className="flex items-center w-full mb-6">
+                    <div className="flex-1 h-px bg-neutral-800"></div>
+                    <span className="px-3 text-xs text-neutral-500 uppercase font-medium">Continue with</span>
+                    <div className="flex-1 h-px bg-neutral-800"></div>
+                </div>
+
+                <div className="flex flex-wrap gap-4 items-center justify-center">
+                    <SocialLoginButton provider="google" />
+                    <SocialLoginButton provider="github" disabled = {true}/>
+                    <SocialLoginButton provider="linkedin" disabled = {true}/>
+                    <SocialLoginButton provider="discord" disabled = {true}/>
+                </div>
+            </div>
+
+            <div className="flex flex-col mt-2 items-center">
+                <button className="text-sm text-blue-500 hover:text-blue-600 mt-2" onClick={() => { setIsNewUser(prev => !prev); setPassword(""); setShowPassword(false); setError(""); }}>{isNewUser ? "Already have an account? Login" : "New User? Signup first"}</button>
             </div>
         </div>
     );

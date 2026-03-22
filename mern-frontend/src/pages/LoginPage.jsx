@@ -9,6 +9,9 @@ function LoginPage() {
         navigate("/dashboard");
 
     };
+    const handleGoogleLogin = () => {
+        window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/google`;
+    }
     return (
         <div className="min-h-screen flex items-center justify-center bg-neutral-950 text-white">
             {/*Left Section*/}

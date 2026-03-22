@@ -64,4 +64,50 @@ const register = async ({ email, password }) => {
     }
 };
 
-module.exports = { login, register };
+const handleOAuthLogin = async (profile, provider) => {
+    let user = await userRepository.findByProvider(provider, profile.id);
+
+    if (!user && profile.emails?.[0]?.value) {
+        user = await userRepository.findByEmail(profile.emails[0].value);
+
+        if (user) {
+            user.provider = provider;
+            user.providerId = profile.id;
+            await user.save();
+        }
+    }
+    if (!user) {
+        user = await userRepository.create({
+            name: profile.displayName || "Unknown User",
+            email: profile.emails?.[0]?.value ?? "",
+            provider: provider,
+            providerId: profile.id,
+            avatar: profile.photos?.[0]?.value ?? ""
+        });
+        logger.info(`New user registered via ${provider}`, {
+            userId: user._id
+        });
+    }
+    const token = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN || "1h" }
+    );
+
+    logger.info(`User logged in via ${provider}`, {
+        userId: user._id
+    });
+
+    return {
+        user: {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar
+        },
+        token
+    }
+
+}
+
+module.exports = { login, register, handleOAuthLogin };

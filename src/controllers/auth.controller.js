@@ -18,4 +18,19 @@ const register = async (req,res,next) => {
     }
 };
 
-module.exports = {login, register};
+const getMe = (req,res) => {
+    const user = req.user.toObject();
+    delete user.password;
+    res.json({user});
+}
+
+const oAuthCallback = (req,res,next) => {
+    try {
+        const {token} = req.user;
+        res.redirect(`${process.env.FRONTEND_URL}/dashboard?token=${token}`);
+    } catch(err) {
+        next(err);
+    }
+}
+
+module.exports = {login, register, getMe, oAuthCallback};
