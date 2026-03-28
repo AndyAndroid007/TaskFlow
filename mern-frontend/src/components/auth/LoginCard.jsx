@@ -72,9 +72,8 @@ function LoginCard({ onSuccess }) {
 
                 <div className="flex flex-wrap gap-4 items-center justify-center">
                     <SocialLoginButton provider="google" />
-                    <SocialLoginButton provider="github" disabled = {true}/>
-                    <SocialLoginButton provider="linkedin" disabled = {true}/>
-                    <SocialLoginButton provider="discord" disabled = {true}/>
+                    <SocialLoginButton provider="github" />
+                    <SocialLoginButton provider="linkedin" />
                 </div>
             </div>
 

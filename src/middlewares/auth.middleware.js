@@ -26,16 +26,16 @@ const auth = async (req, res, next) => {
 
         req.user = user;
 
-        next();
+        return next();
 
     } catch (err) {
-        if (err instanceof ApiError) throw err;
+        if (err instanceof ApiError) return next(err);
         logger.warn('Auth failed — invalid token', {
             path: req.originalUrl,
             method: req.method,
             correlationId: req.correlationId,
         });
-        throw new ApiError(401, "Unauthorized: Invalid Token");
+        return next(new ApiError(401, "Unauthorized: Invalid Token"));
     }
 };
 

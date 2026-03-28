@@ -18,10 +18,21 @@ const register = async (req,res,next) => {
     }
 };
 
-const getMe = (req,res) => {
-    const user = req.user.toObject();
-    delete user.password;
-    res.json({user});
+const getMe = (req,res,next) => {
+    try {
+        if (!req.user) {
+            return next(new Error("Authenticated user was not attached to the request"));
+        }
+
+        const user = typeof req.user.toObject === "function"
+            ? req.user.toObject()
+            : { ...req.user };
+
+        delete user.password;
+        res.json({user});
+    } catch (err) {
+        next(err);
+    }
 }
 
 const oAuthCallback = (req,res,next) => {

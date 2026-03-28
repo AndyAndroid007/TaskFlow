@@ -13,7 +13,8 @@ const findByProvider = async(provider, providerId) => {
 }
 
 const findById = async(id) => {
-    return await Users.findById(id);
+    const user = await Users.findById(id);
+    return user ? {...user.toObject(), id: user._id} : null;
 };
 
 const create = async (userData) => {
