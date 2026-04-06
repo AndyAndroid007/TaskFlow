@@ -18,10 +18,12 @@ app.use(passport.initialize());
 const userRoutes = require("./routes/user.routes");
 const authRoutes = require("./routes/auth.routes");
 const taskRoutes = require("./routes/task.routes");
+const eventRoutes = require("./routes/event.routes");
 
 app.use("/users", userRoutes);
 app.use("/auth", authRoutes);
 app.use("/tasks", taskRoutes);
+app.use("/events", eventRoutes);
 
 const errorHandler = require("./exceptions/errorHandler");
 app.use(errorHandler);

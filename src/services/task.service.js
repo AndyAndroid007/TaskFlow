@@ -31,7 +31,7 @@ const getTaskById = async (userId, taskId) => {
     if (!task) {
         throw new ApiError(404, "Task Not Found!");
     }
-    if (task.userId.toString() !== userId) {
+    if (task.userId.toString() !== userId.toString()) {
         logger.warn('Unauthorized task access attempt', { taskId, requestingUser: userId, taskOwner: task.userId });
         throw new ApiError(403, "Not Allowed");
     }

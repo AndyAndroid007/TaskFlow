@@ -20,4 +20,18 @@ const deleteTask = async (id) => {
     return await Task.findByIdAndDelete(id);
 }
 
-module.exports = {getTaskByUser, getTaskById, createTask, updateTask, deleteTask};
+const getTaskStats = async (userId) => {
+    const mongoose = require('mongoose');
+    return await Task.aggregate([
+        { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+        {
+            $facet: {
+                byStatus: [ { $group: { _id: "$status", count: { $sum: 1 } } } ],
+                byPriority: [ { $group: { _id: "$priority", count: { $sum: 1 } } } ],
+                totalTasks: [ { $count: "total" } ]
+            }
+        }
+    ]);
+};
+
+module.exports = {getTaskByUser, getTaskById, createTask, updateTask, deleteTask, getTaskStats};

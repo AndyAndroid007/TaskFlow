@@ -5,9 +5,15 @@ const logger = require("../utils/logger");
 
 const auth = async (req, res, next) => {
     try {
+        let token;
         const authHeader = req.headers.authorization;
-
-        if (!authHeader || !authHeader.startsWith("Bearer")) {
+        if (authHeader && authHeader.startsWith("Bearer")) {
+            token = authHeader.split(" ")[1];
+        }
+        else if (req.query.token) {
+            token = req.query.token;
+        }
+        if (!token) {
             logger.warn('Auth failed — no token provided', {
                 path: req.originalUrl,
                 method: req.method,
@@ -16,7 +22,6 @@ const auth = async (req, res, next) => {
             throw new ApiError(401, "Unauthorized: No Token Provided");
         }
 
-        const token = authHeader.split(" ")[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         const user = await userRepository.findById(decoded.userId);

@@ -74,7 +74,7 @@ const handleOAuthLogin = async (profile, provider) => {
             user.provider = provider;
             user.providerId = profile.id;
             user.name = profile.displayName || user.name;
-            user.avatar = profile.photos[0].value || user.avatar;
+            user.avatar = profile.photos?.[0]?.value || user.avatar;
             await user.save();
         }
     }
