@@ -7,7 +7,7 @@ function Dashboard({tasks = [], onAdd, onEdit, onDelete}) {
             <div className="max-w-7xl mx-auto flex flex-col gap-6">
                 {/*Header Section*/}
                 <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-semibold text-white">Tasks</h1>
+                    <h1 className="text-3xl font-extrabold text-white">Tasks</h1>
                     <button onClick = {onAdd} className="bg-blue-500 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-xl">Add Task</button>
                 </div>
                 <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">

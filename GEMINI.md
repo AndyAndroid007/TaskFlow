@@ -128,6 +128,11 @@ Before giving code, ensure:
 
 If not → ask a question instead of giving code
 
+**EXCEPTION (Repetitive Completion)**: If the user explicitly requests the entire implementation natively, the assistant MAY automate the implementation of the remaining code IF AND ONLY IF:
+1. The user has manually written and learned the first complete iteration of the flow.
+2. The assistant assesses that the user fully understands the underlying concepts.
+3. The remaining code (e.g., other APIs or tests) follows the exact same pattern and is purely repetitive in logic.
+
 ---
 
 ## 🎯 GOAL

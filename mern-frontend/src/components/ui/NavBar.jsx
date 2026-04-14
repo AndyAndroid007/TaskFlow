@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNotifications } from "../../context/NotificationContext";
+import { Link, useLocation } from "react-router-dom";
 
 const ExtractUserName = (user) => (user?.name || "").split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2) || "";
 
@@ -15,15 +16,18 @@ function NavBar({ user, onLogout }) {
   const { notifications, removeNotification, clear } = useNotifications();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const location = useLocation();
 
   return (
     <div className="flex justify-between items-center p-4 bg-zinc-900 border-b border-white/5 relative">
-      <h2 className="text-2xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-tight">
-        <span className="text-white">Task</span>
-        <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-          Flow
-        </span>
-      </h2>
+      <div className="flex items-center gap-8">
+        <h2 className="text-2xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-tight">
+          <span className="text-white">Task</span>
+          <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+            Flow
+          </span>
+        </h2>
+      </div>
 
       {/* Global Overlay to handle clicking outside */}
       {(isNotificationsOpen || avatarMenuOpen) && (
@@ -34,6 +38,22 @@ function NavBar({ user, onLogout }) {
       )}
 
       <div className="flex items-center gap-4">
+        {/* Navigation Links */}
+        <div className="hidden sm:flex items-center gap-2 bg-black/20 p-1 rounded-xl border border-white/5 mr-2">
+          <Link 
+            to="/dashboard"
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${location.pathname === '/dashboard' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
+          >
+            Tasks
+          </Link>
+          <Link 
+            to="/analytics"
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${location.pathname === '/analytics' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
+          >
+            Analytics
+          </Link>
+        </div>
+
         {/* Bell and Badge */}
         <div className="relative z-50">
           <div 

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "test": "jest",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "dev:all": "bash scripts/start-dev.sh"
@@ -12,15 +13,18 @@
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "jest": "^29.7.0",
     "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.3",
     "kafkajs": "^2.2.4",
+    "mongodb-memory-server": "^11.0.1",
     "mongoose": "^9.0.1",
     "morgan": "^1.10.1",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
     "passport-linkedin-oauth2": "^2.0.0",
+    "supertest": "^7.2.2",
     "uuid": "^13.0.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"

@@ -1184,16 +1184,16 @@ mern-frontend/cypress/
 - [ ] Add update validation schema (PUT — all fields optional)
 - [ ] Frontend loading states — spinners / skeleton states
 - [ ] **Auth improvements:**
-  - [ ] Install Passport.js + OAuth strategy packages
-  - [ ] Update User model (add `provider`, `providerId`, `avatar`; make `password` optional)
-  - [ ] Create Passport strategies (Google, GitHub, LinkedIn, Discord)
-  - [ ] Add OAuth routes (`/auth/google`, `/auth/github`, `/auth/linkedin`, `/auth/discord` + callbacks)
-  - [ ] Create `OAuthButtons.jsx` — provider login buttons on login/register page
+  - [x] Install Passport.js + OAuth strategy packages
+  - [x] Update User model (add `provider`, `providerId`, `avatar`; make `password` optional)
+  - [x] Create Passport strategies (Google, GitHub, LinkedIn, Discord)
+  - [x] Add OAuth routes (`/auth/google`, `/auth/github`, `/auth/linkedin`, `/auth/discord` + callbacks)
+  - [x] Create `OAuthButtons.jsx` — provider login buttons on login/register page
   - [ ] Create `ProtectedRoute.jsx` — reusable auth wrapper component
   - [ ] Create `useAuth.js` hook — token state, expiry check, logout handler
   - [ ] Implement proper logout (clear localStorage + optional token blacklist)
   - [ ] Add token expiry detection — decode JWT `exp`, redirect on expiry
-  - [ ] Update login page UI with OAuth buttons + divider ("or sign in with")
+  - [x] Update login page UI with OAuth buttons + divider ("or sign in with")
 - [ ] Update `CLAUDE.md` — reflect current feature status
 
 ### Phase 3: Kafka Integration ✅ DONE
@@ -1225,32 +1225,32 @@ mern-frontend/cypress/
 - [x] Log all retry attempts and DLQ moves at `warn` level
 - [x] Test duplicate event handling
 
-### Phase 5: Real-Time Notifications ❌ NOT STARTED
+### Phase 5: Real-Time Notifications ✅ DONE
 
-- [ ] Set up SSE endpoint (`GET /events/stream`)
-- [ ] Create `infrastructure/sse/sseManager.js` — manages client connections
-- [ ] Connect notification consumer to SSE broadcaster
-- [ ] Create `useSSE.js` custom React hook
-- [ ] Create `NotificationPanel.jsx` — dropdown UI for notifications
-- [ ] Create `NotificationBadge.jsx` — unread count in navbar
-- [ ] Add notification types: Task completed, Task overdue, Task assigned
-- [ ] Implement `notification.service.js` — format and route notifications
-- [ ] Test real-time flow end-to-end
+- [x] Set up SSE endpoint (`GET /events/stream`)
+- [x] Create `infrastructure/sse/sseManager.js` — manages client connections
+- [x] Connect notification consumer to SSE broadcaster
+- [x] Create `useSSE.js` custom React hook
+- [x] Create `NotificationPanel.jsx` — dropdown UI for notifications
+- [x] Create `NotificationBadge.jsx` — unread count in navbar
+- [x] Add notification types: Task completed, Task overdue, Task assigned
+- [x] Implement `notification.service.js` — format and route notifications
+- [x] Test real-time flow end-to-end
 
-### Phase 6: Analytics Dashboard ❌ NOT STARTED
+### Phase 6: Analytics Dashboard ✅ DONE
 
-- [ ] Create analytics aggregation endpoint (`GET /analytics/summary`)
-- [ ] Implement MongoDB aggregation pipelines for core metrics
-- [ ] Build `AnalyticsDashboard.jsx` with:
+- [x] Create analytics aggregation endpoint (`GET /analytics/summary`)
+- [x] Implement MongoDB aggregation pipelines for core metrics
+- [x] Build `AnalyticsDashboard.jsx` with:
   - Task status distribution (donut chart)
   - Tasks by priority (bar chart)
   - Completion rate (stat card)
   - Overdue count (stat card)
   - Completions over time (line chart)
   - Average time to completion (stat card)
-- [ ] Add Recharts (or react-chartjs-2) as chart library
-- [ ] Add side drawer navigation for switching between Tasks and Analytics views
-- [ ] (Stretch) Tasks per assignee / workload distribution chart
+- [x] Add Recharts (or react-chartjs-2) as chart library
+- [x] Add side drawer navigation for switching between Tasks and Analytics views
+- [x] (Stretch) Tasks per assignee / workload distribution chart
 
 ### Phase 7: Testing ❌ NOT STARTED
 
