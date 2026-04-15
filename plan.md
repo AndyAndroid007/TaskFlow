@@ -108,6 +108,7 @@ Based on a thorough review of the codebase as of March 2026, here is what exists
 | Analytics dashboard features | Phase 6 |
 | Automated tests | Phase 7 |
 | Docker containerization | Phase 8 |
+| Task AI and MCP Tools | Phase 9 |
 
 ---
 
@@ -1252,19 +1253,26 @@ mern-frontend/cypress/
 - [x] Add side drawer navigation for switching between Tasks and Analytics views
 - [x] (Stretch) Tasks per assignee / workload distribution chart
 
-### Phase 7: Testing ❌ NOT STARTED
+### Phase 7: Testing 🔧 IN PROGRESS
 
-- [ ] Set up Jest for backend testing
+**Backend Testing (Complete):**
+- [x] Set up Jest + Supertest for backend testing
+- [x] Integrate `mongodb-memory-server` for test database isolation
+- [x] Write integration tests for Auth routes (Login, Register, Me)
+- [x] Write integration tests for Task routes (CRUD operations)
+- [x] Write integration tests for Analytics routes
+- [x] Write integration tests for OAuth callback routes (Google, GitHub, LinkedIn)
+- [x] Write unit tests for auth middleware
+- [x] Write unit tests for Kafka wrapper (Producer internals & DLQ)
+- [x] Write unit tests for SSE Notification Manager
+- [ ] Write unit tests for Joi validation schemas
+
+**Frontend & E2E Testing (Not Started):**
 - [ ] Set up Vitest + React Testing Library for frontend testing
 - [ ] Set up Cypress for E2E testing
-- [ ] Write unit tests for services (task, auth)
-- [ ] Write unit tests for auth middleware
-- [ ] Write unit tests for Joi validation schemas
-- [ ] Write integration tests for task routes (Supertest)
-- [ ] Write integration tests for auth routes (Supertest)
-- [ ] Write frontend component tests (TaskCard, TaskSidedraw, AlertBox)
-- [ ] Write E2E tests (login flow, task CRUD, validation)
-- [ ] Add edge case / security tests (expired JWT, XSS, authorization checks)
+- [ ] Write frontend component tests (TaskCard, TaskSidedraw, AlertBox, OAuthButtons)
+- [ ] Write E2E tests (login flow, task CRUD, OAuth redirect validation)
+- [ ] Add edge case / security tests (expired JWT frontend handling, authorization checks)
 
 ### Phase 8: DevOps, Deployment & Polish ❌ NOT STARTED
 
@@ -1275,6 +1283,17 @@ mern-frontend/cypress/
 - [ ] Migrate Kafka config to Upstash for deployment environment
 - [ ] Write comprehensive `README.md`
 - [ ] Final `CLAUDE.md` update
+
+### Phase 9: Task AI and MCP Tools Phase 🚀 PLANNED
+
+**AI Integration Strategy:**
+- [ ] Integrate Gemini's Free API to build an advanced conversational TaskFlow assistant.
+- [ ] **Stateful Memory System**: Track past conversation messages per user in the database with a strictly defined history limit and TTL (Time-to-Live) to efficiently maintain long-term context without token overflow.
+- [ ] **Interactive Task Sculpting**: Allow the LLM to intelligently extract user intention through a back-and-forth Q&A dialog to construct the perfect task before proposing it.
+
+**Context-Aware MCP Tooling:**
+- [ ] **Context Tooling (Read)**: Expose tools allowing the LLM to fetch the user's current tasks and analytics, preventing duplicate generation and making workload-aware suggestions.
+- [ ] **Action Tooling (Write)**: Expose an internal MCP tool allowing the LLM to format and generate new tasks natively in the platform, which are finally pushed through a user-review confirmation step before DB insertion.
 
 ---
 
