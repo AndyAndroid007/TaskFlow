@@ -9,4 +9,9 @@ export default defineConfig({
     allowedHosts: true
   },
   plugins: [react(), tailwindcss()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/tests/setupTests.js'
+  }
 })

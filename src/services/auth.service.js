@@ -9,13 +9,13 @@ const login = async ({ email, password }) => {
 
     if (!user) {
         logger.warn('Login failed — email not found', { email });
-        throw new ApiError(401, "Incorrect Email or Password");
+        throw new ApiError(401, "Invalid Credentials");
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
         logger.warn('Login failed — incorrect password', { email, userId: user._id });
-        throw new ApiError(401, "Incorrect Email or Password");
+        throw new ApiError(401, "Invalid Credentials");
     }
 
     const token = jwt.sign(
@@ -36,7 +36,7 @@ const login = async ({ email, password }) => {
     };
 };
 
-const register = async ({ email, password }) => {
+const register = async ({ email, password, name }) => {
     const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
         logger.warn('Registration failed — email already exists', { email });
@@ -44,7 +44,7 @@ const register = async ({ email, password }) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await userRepository.create({ email, password: hashedPassword });
+    const user = await userRepository.create({ email, password: hashedPassword, name });
     const token = jwt.sign(
         { userId: user._id },
         process.env.JWT_SECRET,

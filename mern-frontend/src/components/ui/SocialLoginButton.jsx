@@ -1,8 +1,12 @@
+import googleLogo from '../../assets/google-logo.png';
+import githubLogo from '../../assets/github-logo.png';
+import linkedinLogo from '../../assets/linkedin-logo.png';
+
 function SocialLoginButton({ provider, disabled = false }) {
     const logos = {
-        google: "https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png",
-        github: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-        linkedin: "https://upload.wikimedia.org/wikipedia/commons/c/ca/LinkedIn_logo_initials.png"
+        google: googleLogo,
+        github: githubLogo,
+        linkedin: linkedinLogo
     };
     const url = `${import.meta.env.VITE_API_BASE_URL}/auth/${provider}`;
     return (

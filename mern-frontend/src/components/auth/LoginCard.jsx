@@ -4,20 +4,26 @@ import SocialLoginButton from "../ui/SocialLoginButton";
 function LoginCard({ onSuccess }) {
     const [isNewUser, setIsNewUser] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
+        if (isNewUser && name.trim() === '') {
+            setError("Please enter your name");
+            return;
+        }
         setLoading(true);
         setError("");
         try {
-            const data = isNewUser ? await signup(email, password) :
+            const data = isNewUser ? await signup(email, password, name) :
                 await login(email, password);
             onSuccess(data);
             console.log("Success:", data);
 
+            setName("");
             setEmail("");
             setPassword("");
         } catch (e) {
@@ -39,6 +45,12 @@ function LoginCard({ onSuccess }) {
             </div>
             <form onSubmit={handleLoginSubmit}>
                 <div className="space-y-4">
+                    {isNewUser && (
+                        <div>
+                            <label className="block text-sm text-neutral-300 mb-1">Name</label>
+                            <input name="name" type="text" className="h-10 w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-blue-500" value={name} onChange={(e) => setName(e.target.value)} />
+                        </div>
+                    )}
                     <div>
                         <label className="block text-sm text-neutral-300 mb-1">Email</label>
                         <input type="email" className="h-10 w-full rounded-lg bg-neutral-800 border border-neutral-700 px-3 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-blue-500" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -78,7 +90,7 @@ function LoginCard({ onSuccess }) {
             </div>
 
             <div className="flex flex-col mt-2 items-center">
-                <button className="text-sm text-blue-500 hover:text-blue-600 mt-2" onClick={() => { setIsNewUser(prev => !prev); setPassword(""); setShowPassword(false); setError(""); }}>{isNewUser ? "Already have an account? Login" : "New User? Signup first"}</button>
+                <button className="text-sm text-blue-500 hover:text-blue-600 mt-2" onClick={() => { setIsNewUser(prev => !prev); setName(""); setPassword(""); setShowPassword(false); setError(""); }}>{isNewUser ? "Already have an account? Login" : "New User? Signup first"}</button>
             </div>
         </div>
     );

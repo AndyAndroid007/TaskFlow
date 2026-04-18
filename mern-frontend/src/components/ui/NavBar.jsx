@@ -106,7 +106,7 @@ function NavBar({ user, onLogout }) {
 
         {/* User Avatar & Menu */}
         <div className="relative z-50">
-          <div onClick={() => { setAvatarMenuOpen(!avatarMenuOpen); setIsNotificationsOpen(false); }}>
+          <div data-cy="nav-avatar" onClick={() => { setAvatarMenuOpen(!avatarMenuOpen); setIsNotificationsOpen(false); }}>
             <UserAvatar user={user} />
           </div>
           {avatarMenuOpen && (

@@ -33,3 +33,6 @@ start-dev.sh
 Learnings/
 OAuth/ClientDetails.json
 /Coverage
+mern-frontend/cypress/screenshots
+mern-frontend/cypress/videos
+mern-frontend/cypress/downloads
