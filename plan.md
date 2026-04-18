@@ -51,11 +51,11 @@ The project starts as a **modular monolith** and incrementally introduces event-
 | **Styling** | Tailwind CSS | ✅ In use |
 | **HTTP Client** | Axios | ✅ In use |
 | **OAuth** | Passport.js (Google, GitHub, LinkedIn, Discord) | ❌ Not started |
-| **Backend Testing** | Jest + Supertest | ❌ Not started |
+| **Backend Testing** | Jest + Supertest | ✅ In use |
 | **Frontend Testing** | Vitest + React Testing Library | ❌ Not started |
-| **E2E Testing** | Cypress | ❌ Not started |
-| **Event Infrastructure** | Apache Kafka + KafkaJS | ❌ Not started |
-| **Real-Time** | Server-Sent Events (SSE) | ❌ Not started |
+| **E2E Testing** | Cypress | ✅ In use |
+| **Event Infrastructure** | Apache Kafka + KafkaJS | ✅ In use |
+| **Real-Time** | Server-Sent Events (SSE) | ✅ In use |
 | **Containerization** | Docker + Docker Compose | ❌ Not started |
 
 ---
@@ -91,22 +91,22 @@ Based on a thorough review of the codebase as of March 2026, here is what exists
 
 | Feature | Details |
 |---|---|
-| Frontend auth flow | Backend done; frontend has login page but logout is basic (no token refresh, no protected route HOC) |
-| Loading states | Not fully implemented across all async operations |
-| Joi validation on task routes | Schema exists but needs alignment with current model and wiring to routes |
+| Frontend auth flow | ✅ Improved: Login page with name field, Logout with avatar click, Initial-based profile avatars |
+| Loading states | 🔧 Partially implemented |
+| Joi validation on task routes | 🔧 Schema exists but needs wiring to routes |
 
 ### 3.3 What's Not Started ❌
 
 | Feature | Phase |
 |---|---|
-| Kafka event infrastructure | Phase 3 |
-| Event producers (task events) | Phase 3 |
-| Kafka consumers (notification, analytics) | Phase 3 |
-| Retry / DLQ / idempotency mechanisms | Phase 4 |
-| SSE real-time server | Phase 5 |
-| Frontend real-time notification UI | Phase 5 |
-| Analytics dashboard features | Phase 6 |
-| Automated tests | Phase 7 |
+| Kafka event infrastructure | ✅ Done |
+| Event producers (task events) | ✅ Done |
+| Kafka consumers (notification, analytics) | ✅ Done |
+| Retry / DLQ / idempotency mechanisms | ✅ Done |
+| SSE real-time server | ✅ Done |
+| Frontend real-time notification UI | ✅ Done |
+| Analytics dashboard features | ✅ Done |
+| Automated tests | 🔧 In Progress |
 | Docker containerization | Phase 8 |
 | Task AI and MCP Tools | Phase 9 |
 
@@ -1253,7 +1253,7 @@ mern-frontend/cypress/
 - [x] Add side drawer navigation for switching between Tasks and Analytics views
 - [x] (Stretch) Tasks per assignee / workload distribution chart
 
-### Phase 7: Testing 🔧 IN PROGRESS
+### Phase 7: Testing ✅ PARTIALLY DONE
 
 **Backend Testing (Complete):**
 - [x] Set up Jest + Supertest for backend testing
@@ -1265,13 +1265,13 @@ mern-frontend/cypress/
 - [x] Write unit tests for auth middleware
 - [x] Write unit tests for Kafka wrapper (Producer internals & DLQ)
 - [x] Write unit tests for SSE Notification Manager
-- [ ] Write unit tests for Joi validation schemas
+- [x] Write unit tests for Joi validation schemas
 
-**Frontend & E2E Testing (Not Started):**
+**Frontend & E2E Testing (In Progress):**
 - [ ] Set up Vitest + React Testing Library for frontend testing
-- [ ] Set up Cypress for E2E testing
+- [x] Set up Cypress for E2E testing
 - [ ] Write frontend component tests (TaskCard, TaskSidedraw, AlertBox, OAuthButtons)
-- [ ] Write E2E tests (login flow, task CRUD, OAuth redirect validation)
+- [x] Write E2E tests (login flow, task CRUD, OAuth redirect validation)
 - [ ] Add edge case / security tests (expired JWT frontend handling, authorization checks)
 
 ### Phase 8: DevOps, Deployment & Polish ❌ NOT STARTED
