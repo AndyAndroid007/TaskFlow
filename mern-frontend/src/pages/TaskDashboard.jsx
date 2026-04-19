@@ -13,6 +13,7 @@ function TaskDashboard({ user, setUser }) {
     const [action, setAction] = useState("add");
     const [selectedTask, setSelectedTask] = useState(null);
     const [tasks, setTasks] = useState([]);
+    const [taskView, setTaskView] = useState('created');
     const [alertInfo, setAlertInfo] = useState({
         show: false,
         description: "",
@@ -113,6 +114,7 @@ function TaskDashboard({ user, setUser }) {
     }
 
     const openAddDrawer = () => {
+        setTaskView('created');
         setIsOpen(true);
         setAction("add");
         setSelectedTask(null);
@@ -130,6 +132,10 @@ function TaskDashboard({ user, setUser }) {
         navigate("/");
     }
 
+    const createdTasks = tasks.filter((task) => String(task.userId) === String(user?._id));
+    const assignedTasks = tasks.filter((task) => String(task.userId) !== String(user?._id));
+    const visibleTasks = taskView === 'assigned' ? assignedTasks : createdTasks;
+
     return (
         <>
             <Navbar user={user} onLogout={handleLogout} />
@@ -138,10 +144,19 @@ function TaskDashboard({ user, setUser }) {
                     <AlertBox description={alertInfo.description} type={alertInfo.type} />
                 </div>
             }
-            <Dashboard onAdd={openAddDrawer} onEdit={openEditDrawer} onDelete={handleDeleteTask} tasks={tasks} />
+            <Dashboard
+                user={user}
+                taskView={taskView}
+                onTaskViewChange={setTaskView}
+                onAdd={openAddDrawer}
+                onEdit={openEditDrawer}
+                onDelete={handleDeleteTask}
+                tasks={visibleTasks}
+            />
             {isOpen && (
                 <TaskSidedraw
                     action={action}
+                    currentUser={user}
                     task={selectedTask}
                     onClose={() => setIsOpen(false)}
                     onSave={handleAddTask}

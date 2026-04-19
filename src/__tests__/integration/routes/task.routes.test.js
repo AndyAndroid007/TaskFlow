@@ -3,11 +3,19 @@ const app = require('../../../../src/app');
 
 describe('Task Routes Integration', () => {
     let token;
+    let secondUserToken;
+    let secondUserId;
     let taskId;
 
     const userPayload = {
         name: "Task User",
         email: "taskuser@example.com",
+        password: "password123"
+    };
+
+    const secondUserPayload = {
+        name: "Assignee User",
+        email: "assignee@example.com",
         password: "password123"
     };
 
@@ -25,6 +33,13 @@ describe('Task Routes Integration', () => {
             password: userPayload.password
         });
         token = loginRes.body.token;
+        await request(app).post('/auth/register').send(secondUserPayload);
+        const secondLoginRes = await request(app).post('/auth/login').send({
+            email: secondUserPayload.email,
+            password: secondUserPayload.password
+        });
+        secondUserToken = secondLoginRes.body.token;
+        secondUserId = secondLoginRes.body.user._id;
         // Mongoose heavily enforces assignee ID!
         taskPayload.assignee = loginRes.body.user._id;
     });
@@ -97,6 +112,40 @@ describe('Task Routes Integration', () => {
 
             expect(res.statusCode).toBe(404);
         });
+
+        it('Should show a task on the assignee dashboard when a different owner created it', async () => {
+            await request(app)
+                .post('/tasks')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ ...taskPayload, assignee: secondUserId, title: 'Delegated Task' });
+
+            const ownerRes = await request(app)
+                .get('/tasks')
+                .set('Authorization', `Bearer ${token}`);
+
+            const assigneeRes = await request(app)
+                .get('/tasks')
+                .set('Authorization', `Bearer ${secondUserToken}`);
+
+            expect(ownerRes.statusCode).toBe(200);
+            expect(ownerRes.body.some(task => task.title === 'Delegated Task')).toBe(true);
+            expect(assigneeRes.statusCode).toBe(200);
+            expect(assigneeRes.body.some(task => task.title === 'Delegated Task')).toBe(true);
+        });
+
+        it('Should allow the assignee to fetch a delegated task by ID', async () => {
+            const createRes = await request(app)
+                .post('/tasks')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ ...taskPayload, assignee: secondUserId, title: 'Delegated Task' });
+
+            const res = await request(app)
+                .get(`/tasks/${createRes.body._id}`)
+                .set('Authorization', `Bearer ${secondUserToken}`);
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.title).toBe('Delegated Task');
+        });
     });
 
     describe('PUT /tasks/:id', () => {
@@ -117,6 +166,36 @@ describe('Task Routes Integration', () => {
             expect(res.statusCode).toBe(200);
             expect(res.body.title).toBe("Updated Title");
             expect(res.body.status).toBe("Completed");
+        });
+
+        it('Should allow the assignee to update a delegated task', async () => {
+            const delegatedRes = await request(app)
+                .post('/tasks')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ ...taskPayload, assignee: secondUserId, title: 'Delegated Task' });
+
+            const res = await request(app)
+                .put(`/tasks/${delegatedRes.body._id}`)
+                .set('Authorization', `Bearer ${secondUserToken}`)
+                .send({ status: 'In Progress' });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.status).toBe('In Progress');
+        });
+
+        it('Should prevent the assignee from editing delegated task fields other than status', async () => {
+            const delegatedRes = await request(app)
+                .post('/tasks')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ ...taskPayload, assignee: secondUserId, title: 'Delegated Task' });
+
+            const res = await request(app)
+                .put(`/tasks/${delegatedRes.body._id}`)
+                .set('Authorization', `Bearer ${secondUserToken}`)
+                .send({ title: 'Changed By Assignee' });
+
+            expect(res.statusCode).toBe(403);
+            expect(res.body.message).toBe('Assignees can only update task status');
         });
     });
 
@@ -142,6 +221,19 @@ describe('Task Routes Integration', () => {
                 .get(`/tasks/${taskId}`)
                 .set('Authorization', `Bearer ${token}`);
             expect(getRes.statusCode).toBe(404);
+        });
+
+        it('Should prevent the assignee from deleting a delegated task', async () => {
+            const delegatedRes = await request(app)
+                .post('/tasks')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ ...taskPayload, assignee: secondUserId, title: 'Delegated Task' });
+
+            const res = await request(app)
+                .delete(`/tasks/${delegatedRes.body._id}`)
+                .set('Authorization', `Bearer ${secondUserToken}`);
+
+            expect(res.statusCode).toBe(403);
         });
     });
 });

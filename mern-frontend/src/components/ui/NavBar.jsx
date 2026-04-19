@@ -83,13 +83,17 @@ function NavBar({ user, onLogout }) {
                 {notifications.length === 0 ? (
                   <div className="p-8 text-center text-zinc-500 text-sm italic">No notifications yet</div>
                 ) : (
-                  notifications.map((n, i) => (
-                    <div key={i} className="group p-3 border-b border-white/5 text-sm hover:bg-white/5 flex justify-between items-start gap-4">
+                  notifications.map((n) => (
+                    <div key={n._id} className="group p-3 border-b border-white/5 text-sm hover:bg-white/5 flex justify-between items-start gap-4">
                       <p className="text-zinc-300 leading-snug">
-                        <span className="font-bold text-white">{n.title}</span> was {n.type.split('_').pop().toLowerCase()}
+                        {n.message || (
+                          <>
+                            <span className="font-bold text-white">{n.title}</span> was {n.type.split('_').pop().toLowerCase()}
+                          </>
+                        )}
                       </p>
                       <button 
-                        onClick={(e) => { e.stopPropagation(); removeNotification(i); }}
+                        onClick={(e) => { e.stopPropagation(); removeNotification(n._id); }}
                         className="text-zinc-600 hover:text-white transition-colors"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

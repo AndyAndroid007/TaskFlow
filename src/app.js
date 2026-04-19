@@ -20,12 +20,16 @@ const authRoutes = require("./routes/auth.routes");
 const taskRoutes = require("./routes/task.routes");
 const eventRoutes = require("./routes/event.routes");
 const analyticsRoutes = require("./routes/analytics.routes");
+const aiRoutes = require("./routes/ai.routes");
+const notificationRoutes = require("./routes/notification.routes");
 
 app.use("/users", userRoutes);
 app.use("/auth", authRoutes);
 app.use("/tasks", taskRoutes);
 app.use("/events", eventRoutes);
 app.use("/analytics", analyticsRoutes);
+app.use("/ai", aiRoutes);
+app.use("/notifications", notificationRoutes);
 
 const errorHandler = require("./exceptions/errorHandler");
 app.use(errorHandler);

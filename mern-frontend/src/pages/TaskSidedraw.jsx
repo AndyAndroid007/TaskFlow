@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { getUsers } from "../api/user";
 
-function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert }) {
+function TaskSidedraw({ action, task, currentUser, onClose, onSave, onUpdate, triggerAlert }) {
     // Form States
     const [title, setTitle] = useState(task?.title || "");
     const [description, setDescription] = useState(task?.description || "");
@@ -14,9 +14,12 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
 
     // Users state
     const [users, setUsers] = useState([]);
+    const isOwner = action === "add" || String(task?.userId) === String(currentUser?._id);
+    const isAssignedTask = action === "edit" && !isOwner;
 
     useEffect(() => {
         const fetchUsers = async () => {
+            if (!isOwner) return;
             try {
                 const data = await getUsers();
                 setUsers(data);
@@ -26,7 +29,7 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
             }
         };
         fetchUsers();
-    }, [action, task]);
+    }, [action, task, isOwner]);
 
     const handleAddTag = (e) => {
         e.preventDefault();
@@ -44,24 +47,34 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        if (!title.trim() || !assignee || !dueDate) {
+        if (action === "add" && (!title.trim() || !assignee || !dueDate)) {
             triggerAlert("Please fill in all mandatory fields!", "error");
             return;
         }
 
-        const taskData = {
-            title,
-            description,
-            status,
-            priority,
-            dueDate: dueDate || undefined,
-            assignee,
-            tags
-        };
-
         if (action === "add") {
+            const taskData = {
+                title,
+                description,
+                status,
+                priority,
+                dueDate: dueDate || undefined,
+                assignee,
+                tags
+            };
             onSave(taskData);
         } else {
+            const taskData = isOwner
+                ? {
+                    title,
+                    description,
+                    status,
+                    priority,
+                    dueDate: dueDate || undefined,
+                    assignee,
+                    tags
+                }
+                : { status };
             onUpdate(task._id, taskData);
         }
     };
@@ -98,6 +111,7 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
                                 className="w-full px-3 py-2.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-white focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-colors"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
+                                disabled={isAssignedTask}
                             />
                         </div>
 
@@ -109,6 +123,7 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
                                 rows={3}
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
+                                disabled={isAssignedTask}
                             />
                         </div>
 
@@ -142,6 +157,7 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
                                         className="w-full px-3 py-2.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-white focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 appearance-none pr-10"
                                         value={priority}
                                         onChange={(e) => setPriority(e.target.value)}
+                                        disabled={isAssignedTask}
                                     >
                                         <option value="Low">Low</option>
                                         <option value="Medium">Medium</option>
@@ -164,6 +180,7 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
                                         className="w-full px-3 py-2.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-white focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 appearance-none pr-10"
                                         value={assignee}
                                         onChange={(e) => setAssignee(e.target.value)}
+                                        disabled={isAssignedTask}
                                     >
                                         <option value="" disabled>Select User</option>
                                         {users.map(user => (
@@ -186,6 +203,7 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
                                     className="w-full px-3 py-2.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-white/60 focus:text-white focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-colors uppercase [color-scheme:dark]"
                                     value={dueDate}
                                     onChange={(e) => setDueDate(e.target.value)}
+                                    disabled={isAssignedTask}
                                 />
                             </div>
                         </div>
@@ -222,16 +240,24 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') handleAddTag(e);
                                     }}
+                                    disabled={isAssignedTask}
                                 />
                                 <button
                                     type="button"
                                     onClick={handleAddTag}
                                     className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg border border-blue-500 transition"
+                                    disabled={isAssignedTask}
                                 >
                                     Add
                                 </button>
                             </div>
                         </div>
+
+                        {isAssignedTask && (
+                            <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-sm text-blue-200">
+                                This task was assigned to you. You can update its status, but only the creator can change other fields or delete it.
+                            </div>
+                        )}
 
                     </form>
                 </div>
@@ -243,7 +269,7 @@ function TaskSidedraw({ action, task, onClose, onSave, onUpdate, triggerAlert })
                         form="task-form"
                         className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-lg transition duration-200 shadow-lg shadow-blue-500/20"
                     >
-                        {action === "add" ? "Create Task" : "Save Changes"}
+                        {action === "add" ? "Create Task" : isAssignedTask ? "Update Status" : "Save Changes"}
                     </button>
                 </div>
             </div>

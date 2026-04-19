@@ -34,7 +34,7 @@ const getPriorityIndicator = (priority) => {
     );
 };
 
-function TaskCard({ task, onEdit, onDelete }) {
+function TaskCard({ task, onEdit, onDelete, canDelete = true, ownerName = null }) {
     // Fallbacks provided for new fields in case existing DB entries don't have them
     const { title, description, updatedAt, dueDate, priority = 'Low', tags = [], status = 'Open' } = task;
 
@@ -53,22 +53,29 @@ function TaskCard({ task, onEdit, onDelete }) {
                     <h3 className="text-gray-100 font-semibold tracking-tight text-base leading-snug">
                         {title}
                     </h3>
-                    <button
-                        className="text-zinc-600 hover:text-red-500 transition-colors cursor-pointer shrink-0"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete();
-                        }}
-                    >
-                        {/* CSS styled red hover icon */}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                    </button>
+                    {canDelete && (
+                        <button
+                            className="text-zinc-600 hover:text-red-500 transition-colors cursor-pointer shrink-0"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete();
+                            }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                        </button>
+                    )}
                 </div>
 
                 {/* 2. Description snippet */}
                 {description && (
                     <p className="text-sm text-zinc-400 line-clamp-2 leading-relaxed">
                         {description}
+                    </p>
+                )}
+
+                {ownerName && (
+                    <p className="text-xs font-medium text-zinc-500">
+                        Created by {ownerName}
                     </p>
                 )}
 

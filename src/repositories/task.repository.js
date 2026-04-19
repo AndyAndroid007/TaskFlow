@@ -2,7 +2,12 @@ const { default: mongoose, Mongoose } = require("mongoose");
 const Task = require("../models/task.model");
 
 const getTaskByUser = async (userId) => {
-    return await Task.find({ userId });
+    return await Task.find({
+        $or: [
+            { userId },
+            { assignee: userId }
+        ]
+    });
 };
 
 const getTaskById = async (taskId) => {
