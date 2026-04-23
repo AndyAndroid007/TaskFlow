@@ -6,7 +6,9 @@ function mockCreateConversationDocument(data) {
         messages: data.messages || [],
         activeIntent: data.activeIntent ?? null,
         pendingTaskProposal: data.pendingTaskProposal ?? null,
+        taskCreationState: data.taskCreationState ?? null,
         lastActivity: data.lastActivity || new Date(),
+        markModified: jest.fn(),
         async save() {
             mockConversationStore.set(String(this.userId), this);
             return this;
@@ -14,7 +16,7 @@ function mockCreateConversationDocument(data) {
     };
 }
 
-jest.mock('../../../../src/models/conversation.model', () => ({
+jest.mock('../../../models/conversation.model', () => ({
     findOne: jest.fn(async ({ userId }) => mockConversationStore.get(String(userId)) || null),
     create: jest.fn(async (data) => {
         const doc = mockCreateConversationDocument(data);
@@ -29,24 +31,24 @@ jest.mock('../../../../src/models/conversation.model', () => ({
     }),
 }));
 
-jest.mock('../../../../src/services/task.service', () => ({
+jest.mock('../../../services/task.service', () => ({
     getTasksByUser: jest.fn(),
     createTask: jest.fn(),
 }));
 
-jest.mock('../../../../src/services/user.service', () => ({
+jest.mock('../../../services/user.service', () => ({
     getAllUsers: jest.fn(),
 }));
 
-jest.mock('../../../../src/modules/ai/llmClient', () => ({
+jest.mock('../../../modules/ai/llmClient', () => ({
     callGemini: jest.fn(),
 }));
 
-const Conversation = require('../../../../src/models/conversation.model');
-const taskService = require('../../../../src/services/task.service');
-const userService = require('../../../../src/services/user.service');
-const { callGemini } = require('../../../../src/modules/ai/llmClient');
-const aiService = require('../../../../src/services/ai.service');
+const Conversation = require('../../../models/conversation.model');
+const taskService = require('../../../services/task.service');
+const userService = require('../../../services/user.service');
+const { callGemini } = require('../../../modules/ai/llmClient');
+const aiService = require('../../../services/ai.service');
 
 describe('AI Service Unit Tests', () => {
     const userId = '507f191e810c19729de860ea';
@@ -164,5 +166,36 @@ describe('AI Service Unit Tests', () => {
         expect(response.reply).toBe('Task created successfully!');
         expect(conversation.pendingTaskProposal).toBeNull();
         expect(conversation.activeIntent).toBeNull();
+    });
+
+    it('Should return persisted conversation state for frontend reloads', async () => {
+        await Conversation.create({
+            userId,
+            activeIntent: 'CREATE_TASK',
+            messages: [
+                { role: 'user', content: 'Create a task for the login bug' },
+                { role: 'model', content: "Here's the task I've structured for you. Does this look right?" },
+            ],
+            pendingTaskProposal: {
+                title: 'Fix login bug',
+                assignee: userId,
+            },
+            taskCreationState: null,
+        });
+
+        const response = await aiService.getConversation(userId);
+
+        expect(response).toEqual({
+            messages: [
+                { role: 'user', content: 'Create a task for the login bug' },
+                { role: 'model', content: "Here's the task I've structured for you. Does this look right?" },
+            ],
+            activeIntent: 'CREATE_TASK',
+            pendingTaskProposal: {
+                title: 'Fix login bug',
+                assignee: userId,
+            },
+            taskCreationState: null,
+        });
     });
 });

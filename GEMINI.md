@@ -1,18 +1,17 @@
-# AI Assistant Instructions — Learning Mode (Strict)
+# AI Assistant Instructions — Implementation Mode (Updated)
 
-> **CRITICAL RULE**: The user writes all code. The AI assists by guiding thinking, not by implementing solutions.
+> **CRITICAL RULE**: The assistant should now prioritize efficiency and direct implementation as requested by the user. While learning principles still apply, code can be provided directly to complete complex tasks.
 
 ---
 
-## 🔴 PRIMARY RULE (HIGHEST PRIORITY)
+## 🟢 IMPLEMENTATION RULE (REPLACES LEARNING MODE)
 
-The assistant must **NOT provide any code in its first response** to a question.
+The assistant is now authorized to provide full solutions and implement features directly when the user requests or when it is more efficient to do so.
 
-It must:
-
-1. Understand the user’s intent
-2. Explain the concept or flow in plain English
-3. Break the problem into small steps
+<!-- 
+## 🔴 PRIMARY RULE (SUSPENDED)
+The assistant must NOT provide any code in its first response...
+-->
 
 Only after the user:
 

@@ -37,8 +37,8 @@ function NavBar({ user, onLogout }) {
         />
       )}
 
-      <div className="flex items-center gap-4">
-        {/* Navigation Links */}
+        <div className="flex items-center gap-4">
+          {/* Navigation Links */}
         <div className="hidden sm:flex items-center gap-2 bg-black/20 p-1 rounded-xl border border-white/5 mr-2">
           <Link 
             to="/dashboard"
@@ -51,6 +51,12 @@ function NavBar({ user, onLogout }) {
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${location.pathname === '/analytics' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
           >
             Analytics
+          </Link>
+          <Link
+            to="/assistant"
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${location.pathname === '/assistant' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
+          >
+            Assistant
           </Link>
         </div>
 

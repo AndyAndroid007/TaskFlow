@@ -40,29 +40,29 @@ function buildSuggestionPrompt(taskSummary) {
     ].join('\n');
 }
 
-function buildExtractionPrompt(history, extracted) {
-    const historyText = history.length
-        ? history.map((message) => `${message.role.toUpperCase()}: ${message.content}`).join('\n')
-        : 'No previous conversation.';
+function buildExtractionPrompt(extracted) {
+    const currentState = [
+        `- title: ${extracted.title || 'Unknown'}`,
+        `- priority: ${extracted.priority || 'Unknown'}`,
+        `- dueDate: ${extracted.dueDate || 'Unknown'}`,
+        `- tags: ${Array.isArray(extracted.tags) && extracted.tags.length ? extracted.tags.join(', ') : 'Unknown'}`,
+    ].join('\n');
 
     return [
-        'You are collecting information to create a new task. Extract task details from the conversation.',
+        'You are helping the user create a new task. Your goal is to extract the task details from the conversation history.',
         '',
-        'Current conversation history is provided. Based on what you know so far:',
-        `- title: ${extracted.title || 'MISSING'}`,
-        `- priority: ${extracted.priority || 'MISSING'}`,
-        `- dueDate: ${extracted.dueDate || 'MISSING'}`,
-        `- tags: ${Array.isArray(extracted.tags) && extracted.tags.length ? extracted.tags.join(', ') : 'MISSING'}`,
+        'Current identified fields:',
+        currentState,
         '',
-        'Conversation history:',
-        historyText,
-        '',
-        'If any field marked MISSING is still unknown after reading the history:',
-        '- Ask the user ONE specific question for the FIRST missing field only.',
-        '',
-        'If all required fields (title is enough to proceed) are present:',
-        '- Return the task as JSON wrapped in <task> tags like this:',
-        '<task>{"title":"...","priority":"...","dueDate":"...","tags":["..."],"status":"Open"}</task>',
+        'Instructions:',
+        '1. Search the conversation history for any missing information.',
+        '2. If you find the title in the history, you MUST return the task as JSON wrapped in <task> tags immediately.',
+        '3. If the title is truly not mentioned anywhere in the history, ask the user "What is the title of the task?".',
+        '4. If you have the title but other fields (priority, dueDate, tags) are missing, you can either ask one question for a missing field OR proceed with the title alone if the user seems finished.',
+        '5. Never repeat a question if the user just answered it in their last message.',
+        '6. If the user asks you to create a task of your own choice, propose a complete task and return it as JSON wrapped in <task> tags immediately for user review.',
+        'Example response if title is found:',
+        '<task>{"title":"Buy milk","priority":"Medium","dueDate":"2026-05-01","tags":["shopping"]}</task>',
     ].join('\n');
 }
 

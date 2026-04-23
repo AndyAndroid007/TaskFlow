@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.use(auth);
 
+router.get('/conversation', aiController.getConversation);
 router.post('/chat', validate(chatSchema), aiController.chat);
 router.post('/confirm-task', validate(confirmTaskSchema), aiController.confirmTask);
 router.delete('/conversation', aiController.clearConversation);

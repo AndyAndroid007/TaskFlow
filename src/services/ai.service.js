@@ -51,7 +51,7 @@ async function getOrCreateConversation(userId) {
 async function classifyIntentWithLlm(message, correlationId) {
     try {
         const classificationPrompt = buildClassificationPrompt(message);
-        const rawIntent = await callGemini(DEFAULT_SYSTEM_PROMPT, [
+        const rawIntent = await callGemini('', [
             { role: 'user', content: classificationPrompt },
         ], {
             temperature: 0,
@@ -164,7 +164,6 @@ function indicatesOtherAssignee(message) {
     const normalized = normalizeMessage(message);
     return normalized.includes('someone else')
         || normalized.includes('assign')
-        || normalized.includes('to ')
         || normalized === 'yes'
         || normalized === 'yep';
 }
@@ -211,7 +210,9 @@ function finalizeTaskProposal(conversation, proposal, assignee) {
     };
 
     conversation.pendingTaskProposal = finalizedProposal;
+    conversation.markModified('pendingTaskProposal');
     conversation.taskCreationState = null;
+    conversation.markModified('taskCreationState');
     appendMessage(conversation, 'model', CREATE_TASK_CONFIRMATION_REPLY);
 
     return {
@@ -247,6 +248,7 @@ async function handleTaskAssignmentStep(userId, conversation, message) {
                 ...conversation.taskCreationState,
                 stage: 'awaiting_assignee_identity',
             };
+            conversation.markModified('taskCreationState');
 
             const reply = resolved.type === 'ambiguous' ? ASSIGNEE_AMBIGUOUS_REPLY : ASSIGNEE_IDENTITY_REPLY;
             appendMessage(conversation, 'model', reply);
@@ -308,8 +310,9 @@ async function handleSuggestTasks(userId, conversation, correlationId) {
     const summary = formatTaskSummary(sortTasksForSuggestions(tasks).slice(0, MAX_SUGGESTION_TASKS));
     const prompt = buildSuggestionPrompt(summary);
 
+    const priorMessages = conversation.messages.slice(0, -1);
     const reply = await callGemini(DEFAULT_SYSTEM_PROMPT, [
-        ...conversation.messages,
+        ...priorMessages,
         { role: 'user', content: prompt },
     ], {
         temperature: 0.2,
@@ -334,23 +337,26 @@ async function handleSuggestTasks(userId, conversation, correlationId) {
 
 async function handleCreateTask(conversation, correlationId) {
     const extracted = buildExtractionState(conversation);
-    const prompt = buildExtractionPrompt(conversation.messages, extracted);
-    const rawReply = await callGemini(DEFAULT_SYSTEM_PROMPT, [
-        { role: 'user', content: prompt },
-    ], {
+    const prompt = buildExtractionPrompt(extracted);
+    const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nEXTRACTION MODE:\n${prompt}`;
+    
+    const rawReply = await callGemini(systemPrompt, conversation.messages, {
         temperature: 0.1,
         maxOutputTokens: 192,
     });
+
     const parsed = parseTaskProposal(rawReply);
 
     conversation.activeIntent = INTENTS.CREATE_TASK;
 
     if (parsed.taskProposal) {
         conversation.pendingTaskProposal = null;
+        conversation.markModified('pendingTaskProposal');
         conversation.taskCreationState = {
             stage: 'awaiting_assignee_decision',
             draftTaskProposal: parsed.taskProposal,
         };
+        conversation.markModified('taskCreationState');
         appendMessage(conversation, 'model', ASSIGNEE_DECISION_REPLY);
 
         logger.info('AI task proposal generated', {
@@ -389,8 +395,18 @@ async function handleCreateTask(conversation, correlationId) {
     };
 }
 
-async function handleGeneralChat(conversation) {
-    const reply = FALLBACK_REPLY;
+async function handleGeneralChat(conversation, correlationId) {
+    let reply;
+    try {
+        reply = await callGemini(DEFAULT_SYSTEM_PROMPT, conversation.messages, {
+            temperature: 0.4,
+            maxOutputTokens: 128,
+        });
+    } catch (error) {
+        logger.warn('LLM general chat call failed, using fallback', { correlationId, error: error.message });
+        reply = FALLBACK_REPLY;
+    }
+
     appendMessage(conversation, 'model', reply);
     conversation.activeIntent = INTENTS.GENERAL_CHAT;
 
@@ -422,7 +438,7 @@ async function chat(userId, message, correlationId) {
         } else if (intent === INTENTS.CREATE_TASK) {
             response = await handleCreateTask(conversation, correlationId);
         } else {
-            response = await handleGeneralChat(conversation);
+            response = await handleGeneralChat(conversation, correlationId);
         }
 
         touchConversation(conversation);
@@ -447,7 +463,7 @@ async function chat(userId, message, correlationId) {
     }
 }
 
-async function confirmTask(userId, confirmed, correlationId) {
+async function confirmTask(userId, confirmed, correlationId, updatedData = null) {
     const conversation = await Conversation.findOne({ userId });
 
     if (!conversation || !conversation.pendingTaskProposal) {
@@ -456,7 +472,9 @@ async function confirmTask(userId, confirmed, correlationId) {
 
     if (!confirmed) {
         conversation.pendingTaskProposal = null;
+        conversation.markModified('pendingTaskProposal');
         conversation.taskCreationState = null;
+        conversation.markModified('taskCreationState');
         conversation.activeIntent = INTENTS.CREATE_TASK;
         appendMessage(conversation, 'model', CREATE_TASK_CANCEL_REPLY);
         touchConversation(conversation);
@@ -469,14 +487,19 @@ async function confirmTask(userId, confirmed, correlationId) {
         };
     }
 
+    // Use updatedData if provided, otherwise fallback to the proposal in conversation
+    const taskData = updatedData || conversation.pendingTaskProposal;
+
     const task = await taskService.createTask(userId, {
-        ...conversation.pendingTaskProposal,
-        assignee: conversation.pendingTaskProposal.assignee || userId,
+        ...taskData,
+        assignee: taskData.assignee || userId,
         correlationId,
     });
 
     conversation.pendingTaskProposal = null;
+    conversation.markModified('pendingTaskProposal');
     conversation.taskCreationState = null;
+    conversation.markModified('taskCreationState');
     conversation.activeIntent = null;
     appendMessage(conversation, 'model', CREATE_TASK_SUCCESS_REPLY);
     touchConversation(conversation);
@@ -486,6 +509,7 @@ async function confirmTask(userId, confirmed, correlationId) {
         userId,
         correlationId,
         taskId: task._id,
+        wasEdited: !!updatedData,
     });
 
     return {
@@ -498,8 +522,29 @@ async function confirmTask(userId, confirmed, correlationId) {
 
 async function clearConversation(userId) {
     await Conversation.findOneAndDelete({ userId });
+    logger.info('AI conversation cleared', { userId });
     return {
         reply: 'Conversation cleared.',
+    };
+}
+
+async function getConversation(userId) {
+    const conversation = await Conversation.findOne({ userId });
+
+    if (!conversation) {
+        return {
+            messages: [],
+            activeIntent: null,
+            pendingTaskProposal: null,
+            taskCreationState: null,
+        };
+    }
+
+    return {
+        messages: conversation.messages || [],
+        activeIntent: conversation.activeIntent || null,
+        pendingTaskProposal: conversation.pendingTaskProposal || null,
+        taskCreationState: conversation.taskCreationState || null,
     };
 }
 
@@ -508,6 +553,7 @@ module.exports = {
     chat,
     confirmTask,
     clearConversation,
+    getConversation,
     formatTaskSummary,
     sortTasksForSuggestions,
 };

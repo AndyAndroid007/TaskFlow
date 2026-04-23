@@ -1,6 +1,6 @@
 const logger = require('../../utils/logger');
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
 
 function mapRole(role) {
     return role === 'model' ? 'model' : 'user';
@@ -20,9 +20,7 @@ async function callGemini(systemPrompt, history, options = {}) {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            systemInstruction: {
-                parts: [{ text: systemPrompt }],
-            },
+            ...(systemPrompt ? { systemInstruction: { parts: [{ text: systemPrompt }] } } : {}),
             contents: history.map((message) => ({
                 role: mapRole(message.role),
                 parts: [{ text: message.content }],
