@@ -10,7 +10,6 @@ const {
     buildSuggestionPrompt,
     buildExtractionPrompt,
 } = require('../modules/ai/promptBuilder');
-const { parseTaskProposal } = require('../modules/ai/outputParser');
 const { callGemini } = require('../modules/ai/llmClient');
 
 const FALLBACK_REPLY = "I didn't quite catch that. Could you rephrase what you'd like to do?";
@@ -51,14 +50,14 @@ async function getOrCreateConversation(userId) {
 async function classifyIntentWithLlm(message, correlationId) {
     try {
         const classificationPrompt = buildClassificationPrompt(message);
-        const rawIntent = await callGemini('', [
+        const response = await callGemini('', [
             { role: 'user', content: classificationPrompt },
         ], {
             temperature: 0,
             maxOutputTokens: 16,
         });
 
-        const intent = rawIntent.trim();
+        const intent = response.type === 'text' ? response.text.trim() : '';
         return Object.values(INTENTS).includes(intent) ? intent : INTENTS.GENERAL_CHAT;
     } catch (error) {
         logger.warn('LLM intent classification failed, defaulting to GENERAL_CHAT', {
@@ -134,6 +133,7 @@ function buildExtractionState(conversation) {
         || {};
     return {
         title: proposal.title || null,
+        description: proposal.description || null,
         priority: proposal.priority || null,
         dueDate: proposal.dueDate ? new Date(proposal.dueDate).toISOString().slice(0, 10) : null,
         tags: Array.isArray(proposal.tags) ? proposal.tags : [],
@@ -256,6 +256,7 @@ async function handleTaskAssignmentStep(userId, conversation, message) {
                 intent: INTENTS.CREATE_TASK,
                 reply,
                 taskProposal: null,
+                showUserSelection: true,
             };
         }
 
@@ -264,6 +265,7 @@ async function handleTaskAssignmentStep(userId, conversation, message) {
             intent: INTENTS.CREATE_TASK,
             reply: ASSIGNEE_DECISION_REPLY,
             taskProposal: null,
+            showUserSelection: true,
         };
     }
 
@@ -282,6 +284,7 @@ async function handleTaskAssignmentStep(userId, conversation, message) {
             intent: INTENTS.CREATE_TASK,
             reply,
             taskProposal: null,
+            showUserSelection: true,
         };
     }
 
@@ -311,13 +314,15 @@ async function handleSuggestTasks(userId, conversation, correlationId) {
     const prompt = buildSuggestionPrompt(summary);
 
     const priorMessages = conversation.messages.slice(0, -1);
-    const reply = await callGemini(DEFAULT_SYSTEM_PROMPT, [
+    const response = await callGemini(DEFAULT_SYSTEM_PROMPT, [
         ...priorMessages,
         { role: 'user', content: prompt },
     ], {
         temperature: 0.2,
         maxOutputTokens: 128,
     });
+    
+    const reply = response.type === 'text' ? response.text : FALLBACK_REPLY;
 
     appendMessage(conversation, 'model', reply);
     conversation.activeIntent = INTENTS.SUGGEST_TASKS;
@@ -340,52 +345,79 @@ async function handleCreateTask(conversation, correlationId) {
     const prompt = buildExtractionPrompt(extracted);
     const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nEXTRACTION MODE:\n${prompt}`;
     
-    const rawReply = await callGemini(systemPrompt, conversation.messages, {
+    const tools = [{
+        functionDeclarations: [{
+            name: 'propose_task',
+            description: 'Propose a structured task to be created based on the user\'s input. Use this tool ONLY when you have enough context to infer a task title.',
+            parameters: {
+                type: 'OBJECT',
+                properties: {
+                    title: { type: 'STRING', description: 'The title of the task' },
+                    description: { type: 'STRING', description: 'Details about the task' },
+                    priority: { type: 'STRING', enum: ['Low', 'Medium', 'High'], description: 'Task priority' },
+                    dueDate: { type: 'STRING', description: 'ISO 8601 date string for due date, if mentioned' },
+                    tags: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Relevant tags' }
+                },
+                required: ['title']
+            }
+        }]
+    }];
+
+    const response = await callGemini(systemPrompt, conversation.messages, {
         temperature: 0.1,
         maxOutputTokens: 192,
+        tools
     });
-
-    const parsed = parseTaskProposal(rawReply);
 
     conversation.activeIntent = INTENTS.CREATE_TASK;
 
-    if (parsed.taskProposal) {
-        conversation.pendingTaskProposal = null;
-        conversation.markModified('pendingTaskProposal');
-        conversation.taskCreationState = {
-            stage: 'awaiting_assignee_decision',
-            draftTaskProposal: parsed.taskProposal,
-        };
-        conversation.markModified('taskCreationState');
-        appendMessage(conversation, 'model', ASSIGNEE_DECISION_REPLY);
+    if (response.type === 'function_call' && response.functionCall?.name === 'propose_task') {
+        const proposal = response.functionCall.args || {};
+        
+        if (conversation.pendingTaskProposal && conversation.pendingTaskProposal.assignee) {
+            const updatedProposal = {
+                ...proposal,
+                assignee: conversation.pendingTaskProposal.assignee,
+            };
+            conversation.pendingTaskProposal = updatedProposal;
+            conversation.markModified('pendingTaskProposal');
+            conversation.taskCreationState = null;
+            conversation.markModified('taskCreationState');
+            appendMessage(conversation, 'model', CREATE_TASK_CONFIRMATION_REPLY);
 
-        logger.info('AI task proposal generated', {
-            correlationId,
-        });
+            logger.info('AI task proposal updated via tool', {
+                correlationId,
+            });
 
-        return {
-            intent: INTENTS.CREATE_TASK,
-            reply: ASSIGNEE_DECISION_REPLY,
-            taskProposal: null,
-        };
+            return {
+                intent: INTENTS.CREATE_TASK,
+                reply: CREATE_TASK_CONFIRMATION_REPLY,
+                taskProposal: updatedProposal,
+            };
+        } else {
+            conversation.pendingTaskProposal = null;
+            conversation.markModified('pendingTaskProposal');
+            conversation.taskCreationState = {
+                stage: 'awaiting_assignee_decision',
+                draftTaskProposal: proposal,
+            };
+            conversation.markModified('taskCreationState');
+            appendMessage(conversation, 'model', ASSIGNEE_DECISION_REPLY);
+
+            logger.info('AI task proposal generated via tool', {
+                correlationId,
+            });
+
+            return {
+                intent: INTENTS.CREATE_TASK,
+                reply: ASSIGNEE_DECISION_REPLY,
+                taskProposal: null,
+                showUserSelection: true,
+            };
+        }
     }
 
-    if (parsed.validationError) {
-        logger.warn('AI task proposal failed validation', {
-            correlationId,
-            error: parsed.validationError.message,
-            rawReply,
-        });
-
-        appendMessage(conversation, 'model', CREATE_TASK_REPHRASE_REPLY);
-        return {
-            intent: INTENTS.CREATE_TASK,
-            reply: CREATE_TASK_REPHRASE_REPLY,
-            taskProposal: null,
-        };
-    }
-
-    const reply = parsed.reply || FALLBACK_REPLY;
+    const reply = response.type === 'text' && response.text ? response.text : FALLBACK_REPLY;
     appendMessage(conversation, 'model', reply);
 
     return {
@@ -395,13 +427,21 @@ async function handleCreateTask(conversation, correlationId) {
     };
 }
 
-async function handleGeneralChat(conversation, correlationId) {
+async function handleGeneralChat(userId, conversation, correlationId) {
     let reply;
     try {
-        reply = await callGemini(DEFAULT_SYSTEM_PROMPT, conversation.messages, {
+        const tasks = await taskService.getTasksByUser(userId);
+        const taskSummary = tasks.length > 0 
+            ? `Current tasks for the user:\n${formatTaskSummary(tasks)}`
+            : 'The user has no tasks currently.';
+            
+        const contextPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nUSER CONTEXT:\n${taskSummary}`;
+
+        const response = await callGemini(contextPrompt, conversation.messages, {
             temperature: 0.4,
             maxOutputTokens: 128,
         });
+        reply = response.type === 'text' ? response.text : FALLBACK_REPLY;
     } catch (error) {
         logger.warn('LLM general chat call failed, using fallback', { correlationId, error: error.message });
         reply = FALLBACK_REPLY;
@@ -415,6 +455,118 @@ async function handleGeneralChat(conversation, correlationId) {
         reply,
         taskProposal: null,
     };
+}
+
+async function handleDeleteTask(userId, conversation, correlationId) {
+    const tasks = await taskService.getTasksByUser(userId);
+    const taskSummary = tasks.length > 0 
+        ? `Here are the user's current tasks:\n${tasks.map(t => `- ID: ${t._id} | Title: ${t.title}`).join('\n')}`
+        : 'The user has no tasks.';
+
+    const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nTASK LIST:\n${taskSummary}\n\nInstructions:\n1. If the user identifies a specific task to delete (e.g., by name, ID, or by saying 'this' when there's only one task or it was recently discussed), call the propose_deletion tool with its ID.\n2. If the user has only ONE task and says "delete it" or "delete this task", proceed with that task.\n3. If it is truly ambiguous, ask the user to clarify which task from the list above.`;
+    
+    const tools = [{
+        functionDeclarations: [{
+            name: 'propose_deletion',
+            description: 'Propose to delete a specific task by its ID. This will show a confirmation card to the user.',
+            parameters: {
+                type: 'OBJECT',
+                properties: {
+                    taskId: { type: 'STRING', description: 'The unique ID of the task to delete' }
+                },
+                required: ['taskId']
+            }
+        }]
+    }];
+
+    const response = await callGemini(systemPrompt, conversation.messages, {
+        temperature: 0.1,
+        maxOutputTokens: 128,
+        tools
+    });
+
+    if (response.type === 'function_call' && response.functionCall?.name === 'propose_deletion') {
+        const { taskId } = response.functionCall.args;
+        const task = tasks.find(t => String(t._id) === String(taskId));
+        
+        if (task) {
+            const proposal = {
+                action: 'delete',
+                taskId: task._id,
+                taskTitle: task.title,
+                taskData: task
+            };
+            conversation.pendingTaskProposal = proposal;
+            conversation.markModified('pendingTaskProposal');
+            const reply = `I've found the task "${task.title}". Are you sure you want to delete it?`;
+            appendMessage(conversation, 'model', reply);
+            return { intent: INTENTS.DELETE_TASK, reply, taskProposal: proposal };
+        }
+    }
+
+    const reply = response.type === 'text' ? response.text : 'Which task should I delete?';
+    appendMessage(conversation, 'model', reply);
+    return { intent: INTENTS.DELETE_TASK, reply, taskProposal: null };
+}
+
+async function handleUpdateTask(userId, conversation, correlationId) {
+    const tasks = await taskService.getTasksByUser(userId);
+    const taskSummary = tasks.length > 0 
+        ? `User's current tasks:\n${tasks.map(t => `- ID: ${t._id} | Title: ${t.title} | Priority: ${t.priority} | Status: ${t.status}`).join('\n')}`
+        : 'No tasks found.';
+
+    const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nTASK LIST:\n${taskSummary}\n\nInstructions:\n1. If the user wants to update a task and specifies which one (e.g., by name, ID, or 'this' if it's the only one), call the propose_update tool with the taskId and the new field values.\n2. If the user has only ONE task and says "update it" or "update this task", proceed with that task.\n3. Only include the fields that need updating.`;
+
+    const tools = [{
+        functionDeclarations: [{
+            name: 'propose_update',
+            description: 'Propose updates to an existing task.',
+            parameters: {
+                type: 'OBJECT',
+                properties: {
+                    taskId: { type: 'STRING', description: 'ID of the task to update' },
+                    title: { type: 'STRING' },
+                    description: { type: 'STRING' },
+                    priority: { type: 'STRING', enum: ['Low', 'Medium', 'High'] },
+                    status: { type: 'STRING', enum: ['Open', 'In Progress', 'Completed'] },
+                    dueDate: { type: 'STRING' },
+                    tags: { type: 'ARRAY', items: { type: 'STRING' } }
+                },
+                required: ['taskId']
+            }
+        }]
+    }];
+
+    const response = await callGemini(systemPrompt, conversation.messages, {
+        temperature: 0.1,
+        maxOutputTokens: 192,
+        tools
+    });
+
+    if (response.type === 'function_call' && response.functionCall?.name === 'propose_update') {
+        const { taskId, ...updates } = response.functionCall.args;
+        const task = tasks.find(t => String(t._id) === String(taskId));
+        
+        if (task) {
+            const proposal = {
+                action: 'update',
+                taskId: task._id,
+                taskTitle: task.title,
+                updates: updates,
+                taskData: { ...task.toObject(), ...updates },
+                originalTask: task.toObject()
+            };
+            conversation.pendingTaskProposal = proposal;
+            conversation.markModified('pendingTaskProposal');
+            const reply = `I've prepared the updates for "${task.title}". Should I apply them?`;
+            appendMessage(conversation, 'model', reply);
+            return { intent: INTENTS.UPDATE_TASK, reply, taskProposal: proposal };
+        }
+    }
+
+    const reply = response.type === 'text' ? response.text : 'Which task should I update and what changes should I make?';
+    appendMessage(conversation, 'model', reply);
+    return { intent: INTENTS.UPDATE_TASK, reply, taskProposal: null };
 }
 
 async function chat(userId, message, correlationId) {
@@ -433,12 +585,29 @@ async function chat(userId, message, correlationId) {
         const intent = await resolveIntent(message, conversation, correlationId);
         let response;
 
+        if (intent === INTENTS.CANCEL) {
+            conversation.pendingTaskProposal = null;
+            conversation.markModified('pendingTaskProposal');
+            conversation.taskCreationState = null;
+            conversation.markModified('taskCreationState');
+            conversation.activeIntent = null;
+            const reply = "No problem. I've cancelled the current process. What else can I help you with?";
+            appendMessage(conversation, 'model', reply);
+            touchConversation(conversation);
+            await conversation.save();
+            return { intent: INTENTS.CANCEL, reply, taskProposal: null };
+        }
+
         if (intent === INTENTS.SUGGEST_TASKS) {
             response = await handleSuggestTasks(userId, conversation, correlationId);
         } else if (intent === INTENTS.CREATE_TASK) {
             response = await handleCreateTask(conversation, correlationId);
+        } else if (intent === INTENTS.DELETE_TASK) {
+            response = await handleDeleteTask(userId, conversation, correlationId);
+        } else if (intent === INTENTS.UPDATE_TASK) {
+            response = await handleUpdateTask(userId, conversation, correlationId);
         } else {
-            response = await handleGeneralChat(conversation, correlationId);
+            response = await handleGeneralChat(userId, conversation, correlationId);
         }
 
         touchConversation(conversation);
@@ -470,54 +639,70 @@ async function confirmTask(userId, confirmed, correlationId, updatedData = null)
         throw new ApiError(400, 'No pending task to confirm');
     }
 
+    const proposal = conversation.pendingTaskProposal;
+
     if (!confirmed) {
         conversation.pendingTaskProposal = null;
         conversation.markModified('pendingTaskProposal');
         conversation.taskCreationState = null;
         conversation.markModified('taskCreationState');
-        conversation.activeIntent = INTENTS.CREATE_TASK;
-        appendMessage(conversation, 'model', CREATE_TASK_CANCEL_REPLY);
+        conversation.activeIntent = null;
+        
+        const reply = proposal.action === 'delete' ? "Deletion cancelled." : "Update cancelled.";
+        appendMessage(conversation, 'model', reply);
         touchConversation(conversation);
         await conversation.save();
 
         return {
-            intent: INTENTS.CREATE_TASK,
-            reply: CREATE_TASK_CANCEL_REPLY,
+            intent: conversation.activeIntent || INTENTS.GENERAL_CHAT,
+            reply,
             taskProposal: null,
         };
     }
 
-    // Use updatedData if provided, otherwise fallback to the proposal in conversation
-    const taskData = updatedData || conversation.pendingTaskProposal;
+    let result;
+    let reply;
 
-    const task = await taskService.createTask(userId, {
-        ...taskData,
-        assignee: taskData.assignee || userId,
-        correlationId,
-    });
+    if (proposal.action === 'delete') {
+        await taskService.deleteTask(userId, proposal.taskId, correlationId);
+        reply = `Task "${proposal.taskTitle}" deleted successfully.`;
+        result = { intent: INTENTS.DELETE_TASK, reply, taskProposal: null };
+    } else if (proposal.action === 'update') {
+        const updateData = updatedData || proposal.updates;
+        const updated = await taskService.updateTask(userId, proposal.taskId, {
+            ...updateData,
+            correlationId,
+        });
+        reply = `Task "${proposal.taskTitle}" updated successfully.`;
+        result = { intent: INTENTS.UPDATE_TASK, reply, taskProposal: null, task: updated };
+    } else {
+        // Fallback to creation logic
+        const taskData = updatedData || proposal;
+        const task = await taskService.createTask(userId, {
+            ...taskData,
+            assignee: taskData.assignee || userId,
+            correlationId,
+        });
+        reply = CREATE_TASK_SUCCESS_REPLY;
+        result = { intent: INTENTS.CREATE_TASK, reply, taskProposal: null, task };
+    }
 
     conversation.pendingTaskProposal = null;
     conversation.markModified('pendingTaskProposal');
     conversation.taskCreationState = null;
     conversation.markModified('taskCreationState');
     conversation.activeIntent = null;
-    appendMessage(conversation, 'model', CREATE_TASK_SUCCESS_REPLY);
+    appendMessage(conversation, 'model', reply);
     touchConversation(conversation);
     await conversation.save();
 
-    logger.info('AI task proposal confirmed and created', {
+    logger.info('AI proposal confirmed', {
         userId,
         correlationId,
-        taskId: task._id,
-        wasEdited: !!updatedData,
+        action: proposal.action || 'create',
     });
 
-    return {
-        intent: INTENTS.CREATE_TASK,
-        reply: CREATE_TASK_SUCCESS_REPLY,
-        taskProposal: null,
-        task,
-    };
+    return result;
 }
 
 async function clearConversation(userId) {
@@ -540,11 +725,15 @@ async function getConversation(userId) {
         };
     }
 
+    const showUserSelection = !!(conversation.taskCreationState && 
+        ['awaiting_assignee_decision', 'awaiting_assignee_identity'].includes(conversation.taskCreationState.stage));
+
     return {
         messages: conversation.messages || [],
         activeIntent: conversation.activeIntent || null,
         pendingTaskProposal: conversation.pendingTaskProposal || null,
         taskCreationState: conversation.taskCreationState || null,
+        showUserSelection
     };
 }
 

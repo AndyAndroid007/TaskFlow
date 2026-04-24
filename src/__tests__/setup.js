@@ -9,7 +9,7 @@ jest.mock('uuid', () => ({
 let mongoServer;
 
 beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await MongoMemoryServer.create({ instance: { ip: '127.0.0.1' } });
     const uri = mongoServer.getUri();
     await mongoose.connect(uri);
 });

@@ -70,7 +70,7 @@ describe('AI Service Unit Tests', () => {
                 dueDate: '2026-04-18T00:00:00.000Z',
             },
         ]);
-        callGemini.mockResolvedValue('Focus on fixing the login bug first.');
+        callGemini.mockResolvedValue({ type: 'text', text: 'Focus on fixing the login bug first.' });
 
         const response = await aiService.chat(userId, 'What should I work on today?', 'corr-1');
         const conversation = await Conversation.findOne({ userId });
@@ -85,7 +85,18 @@ describe('AI Service Unit Tests', () => {
     });
 
     it('Should store a validated task proposal for later confirmation', async () => {
-        callGemini.mockResolvedValue('<task>{"title":"Fix login bug","priority":"High","dueDate":"2026-04-25","tags":["auth"],"status":"Open"}</task>');
+        callGemini.mockResolvedValue({
+            type: 'function_call',
+            functionCall: {
+                name: 'propose_task',
+                args: {
+                    title: "Fix login bug",
+                    priority: "High",
+                    dueDate: "2026-04-25",
+                    tags: ["auth"]
+                }
+            }
+        });
 
         const response = await aiService.chat(userId, 'Create a task to fix the login bug', 'corr-2');
         const conversation = await Conversation.findOne({ userId });
@@ -107,7 +118,18 @@ describe('AI Service Unit Tests', () => {
     });
 
     it('Should finalize a personal AI task after the user chooses to keep it personal', async () => {
-        callGemini.mockResolvedValue('<task>{"title":"Fix login bug","priority":"High","dueDate":"2026-04-25","tags":["auth"],"status":"Open"}</task>');
+        callGemini.mockResolvedValue({
+            type: 'function_call',
+            functionCall: {
+                name: 'propose_task',
+                args: {
+                    title: "Fix login bug",
+                    priority: "High",
+                    dueDate: "2026-04-25",
+                    tags: ["auth"]
+                }
+            }
+        });
 
         await aiService.chat(userId, 'Create a task to fix the login bug', 'corr-2a');
         const response = await aiService.chat(userId, 'me', 'corr-2b');
@@ -125,7 +147,18 @@ describe('AI Service Unit Tests', () => {
     });
 
     it('Should resolve another assignee by name before finalizing the proposal', async () => {
-        callGemini.mockResolvedValue('<task>{"title":"Fix login bug","priority":"High","dueDate":"2026-04-25","tags":["auth"],"status":"Open"}</task>');
+        callGemini.mockResolvedValue({
+            type: 'function_call',
+            functionCall: {
+                name: 'propose_task',
+                args: {
+                    title: "Fix login bug",
+                    priority: "High",
+                    dueDate: "2026-04-25",
+                    tags: ["auth"]
+                }
+            }
+        });
         userService.getAllUsers.mockResolvedValue([
             { _id: userId, name: 'Owner User', email: 'owner@example.com' },
             { _id: '507f191e810c19729de860eb', name: 'Jane Doe', email: 'jane@example.com' },

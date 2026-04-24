@@ -25,7 +25,7 @@ const ConversationSchema = new mongoose.Schema({
     },
     activeIntent: {
         type: String,
-        enum: ['SUGGEST_TASKS', 'CREATE_TASK', 'GENERAL_CHAT'],
+        enum: ['SUGGEST_TASKS', 'CREATE_TASK', 'UPDATE_TASK', 'DELETE_TASK', 'GENERAL_CHAT'],
         default: null,
     },
     pendingTaskProposal: {
