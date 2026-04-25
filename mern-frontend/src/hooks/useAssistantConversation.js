@@ -48,7 +48,13 @@ export function useAssistantConversation(activeToken) {
         try {
             const response = await sendChatMessage(trimmedMessage);
             setActiveIntent(response.intent || null);
-            setPendingTaskProposal(response.taskProposal || null);
+            // Only replace the proposal when the server explicitly returns a new one.
+            // If response.taskProposal is null during a refinement turn, keep the
+            // existing card visible rather than wiping it.
+            // Exception: CANCEL intent must always clear the proposal.
+            if (response.intent === 'CANCEL' || (response.taskProposal !== undefined && response.taskProposal !== null)) {
+                setPendingTaskProposal(response.taskProposal || null);
+            }
             setShowUserSelection(response.showUserSelection || false);
             if (response.taskProposal) setTaskCreationState(null);
             appendAssistantReply(response.reply);

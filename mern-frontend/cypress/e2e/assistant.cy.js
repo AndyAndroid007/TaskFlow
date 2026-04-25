@@ -13,19 +13,20 @@ describe("Assistant Flow", () => {
         cy.get("nav").contains("Assistant").click();
     });
 
-    it("should load the assistant dashboard empty state", () => {
-        cy.contains("Chat-first task intelligence").should("be.visible");
+    it("should load the assistant empty state", () => {
         cy.contains("TaskFlow AI").should("be.visible");
-        cy.get("textarea").should("have.attr", "placeholder").and("include", "Message the assistant");
+        cy.contains("How can I help you today?").should("be.visible");
+        cy.get("textarea").should(
+            "have.attr",
+            "placeholder"
+        ).and("include", "Message TaskFlow AI");
     });
 
     it("should send a general chat message and display AI response", () => {
         cy.intercept("POST", "/api/ai/chat").as("chatRequest");
-        
-        // Ensure the chat is ready
+
         cy.contains("TaskFlow AI").should("be.visible");
 
-        // Use the textarea for messaging
         cy.get("textarea").type("Hello!{enter}");
 
         cy.wait("@chatRequest").then((interception) => {
@@ -33,14 +34,12 @@ describe("Assistant Flow", () => {
             expect(interception.response.body.reply).to.be.a("string");
         });
 
-        // The UI should display the AI's response
         cy.contains("TaskFlow AI").should("be.visible");
     });
 
     it("should display a task proposal when creating a task", () => {
         cy.intercept("POST", "/api/ai/chat").as("chatRequest");
 
-        // Ask the AI to create a task
         cy.get("textarea").type("Remind me to review the PR tomorrow{enter}");
 
         cy.wait("@chatRequest");
@@ -51,7 +50,6 @@ describe("Assistant Flow", () => {
     });
 
     it("should allow confirming a task proposal and navigate to dashboard to see it", () => {
-        // Setup intercept for AI chat
         cy.intercept("POST", "/api/ai/chat", {
             statusCode: 200,
             body: {
@@ -61,12 +59,13 @@ describe("Assistant Flow", () => {
                     title: "Mock Task E2E",
                     priority: "High",
                     dueDate: new Date().toISOString(),
-                    tags: ["mock"]
-                }
-            }
+                    tags: ["mock"],
+                },
+            },
         }).as("chatRequest");
 
-        cy.intercept("POST", "/api/ai/confirm").as("confirmRequest");
+        // Use the correct confirm-task endpoint
+        cy.intercept("POST", "/api/ai/confirm-task").as("confirmRequest");
 
         cy.get("textarea").type("Make a mock task{enter}");
         cy.wait("@chatRequest");
@@ -78,7 +77,14 @@ describe("Assistant Flow", () => {
         cy.contains("AI task confirmed and created successfully").should("be.visible");
 
         // Navigate to the Dashboard to verify it appears
-        cy.get("nav").contains("Dashboard").click();
+        cy.get("nav").contains("Tasks").click();
         cy.contains("Mock Task E2E").should("be.visible");
+    });
+
+    it("should allow resetting the conversation", () => {
+        cy.intercept("DELETE", "/api/ai/conversation").as("clearRequest");
+
+        cy.contains("Reset Conversation").click();
+        cy.wait("@clearRequest").its("response.statusCode").should("eq", 200);
     });
 });

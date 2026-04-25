@@ -16,116 +16,146 @@ function NavBar({ user, onLogout }) {
   const { notifications, removeNotification, clear } = useNotifications();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
+  const navLinks = [
+    { to: "/dashboard", label: "Tasks" },
+    { to: "/analytics", label: "Analytics" },
+    { to: "/assistant", label: "Assistant" },
+  ];
+
   return (
-    <div className="flex justify-between items-center p-4 bg-zinc-900 border-b border-white/5 relative">
-      <div className="flex items-center gap-8">
-        <h2 className="text-2xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-tight">
-          <span className="text-white">Task</span>
-          <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-            Flow
-          </span>
-        </h2>
-      </div>
-
-      {/* Global Overlay to handle clicking outside */}
-      {(isNotificationsOpen || avatarMenuOpen) && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => { setIsNotificationsOpen(false); setAvatarMenuOpen(false); }}
-        />
-      )}
-
-        <div className="flex items-center gap-4">
-          {/* Navigation Links */}
-        <div className="hidden sm:flex items-center gap-2 bg-black/20 p-1 rounded-xl border border-white/5 mr-2">
-          <Link 
-            to="/dashboard"
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${location.pathname === '/dashboard' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
-          >
-            Tasks
-          </Link>
-          <Link 
-            to="/analytics"
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${location.pathname === '/analytics' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
-          >
-            Analytics
-          </Link>
-          <Link
-            to="/assistant"
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${location.pathname === '/assistant' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
-          >
-            Assistant
-          </Link>
+    <div className="relative flex flex-col bg-zinc-900 border-b border-white/5">
+      <div className="flex justify-between items-center p-4 relative">
+        <div className="flex items-center gap-8">
+          <h2 className="text-2xl sm:text-2xl lg:text-3xl font-bold tracking-tight leading-tight">
+            <span className="text-white">Task</span>
+            <span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+              Flow
+            </span>
+          </h2>
         </div>
 
-        {/* Bell and Badge */}
-        <div className="relative z-50">
-          <div 
-            className="cursor-pointer p-2 hover:bg-white/5 rounded-full transition-colors"
-            onClick={() => { setIsNotificationsOpen(!isNotificationsOpen); setAvatarMenuOpen(false); }}
+        {/* Global Overlay to handle clicking outside */}
+        {(isNotificationsOpen || avatarMenuOpen || mobileMenuOpen) && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => { setIsNotificationsOpen(false); setAvatarMenuOpen(false); setMobileMenuOpen(false); }}
+          />
+        )}
+
+        <div className="flex items-center gap-4">
+          {/* Desktop Navigation Links */}
+          <div className="hidden sm:flex items-center gap-2 bg-black/20 p-1 rounded-xl border border-white/5 mr-2">
+            {navLinks.map(({ to, label }) => (
+              <Link
+                key={to}
+                to={to}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${location.pathname === to ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Mobile Hamburger Button */}
+          <button
+            className="flex sm:hidden p-2 rounded-full hover:bg-white/5 transition-colors text-zinc-400 hover:text-white"
+            onClick={() => { setMobileMenuOpen(!mobileMenuOpen); setIsNotificationsOpen(false); setAvatarMenuOpen(false); }}
+            aria-label="Open menu"
           >
-            <svg className="w-6 h-6 text-zinc-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {mobileMenuOpen
+                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              }
             </svg>
-            {notifications.length > 0 && (
-              <span className="absolute top-1 right-1 bg-blue-600 text-[10px] rounded-full h-4 w-4 flex items-center justify-center border border-zinc-900 text-white font-bold">
-                {notifications.length}
-              </span>
+          </button>
+
+          {/* Bell and Badge */}
+          <div className="relative z-50">
+            <div
+              className="cursor-pointer p-2 hover:bg-white/5 rounded-full transition-colors"
+              onClick={() => { setIsNotificationsOpen(!isNotificationsOpen); setAvatarMenuOpen(false); setMobileMenuOpen(false); }}
+            >
+              <svg className="w-6 h-6 text-zinc-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {notifications.length > 0 && (
+                <span className="absolute top-1 right-1 bg-blue-600 text-[10px] rounded-full h-4 w-4 flex items-center justify-center border border-zinc-900 text-white font-bold">
+                  {notifications.length}
+                </span>
+              )}
+            </div>
+
+            {/* Notifications Dropdown */}
+            {isNotificationsOpen && (
+              <div className="absolute top-12 right-0 w-80 bg-zinc-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+                <div className="p-3 border-b border-white/10 flex justify-between items-center">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Notifications</span>
+                  {notifications.length > 0 && (
+                    <button onClick={clear} className="text-[10px] text-blue-500 hover:text-blue-400 font-bold uppercase">Clear all</button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-8 text-center text-zinc-500 text-sm italic">No notifications yet</div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div key={n._id} className="group p-3 border-b border-white/5 text-sm hover:bg-white/5 flex justify-between items-start gap-4">
+                        <p className="text-zinc-300 leading-snug">
+                          {n.message || (
+                            <>
+                              <span className="font-bold text-white">{n.title}</span> was {n.type.split('_').pop().toLowerCase()}
+                            </>
+                          )}
+                        </p>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeNotification(n._id); }}
+                          className="text-zinc-600 hover:text-white transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
           </div>
 
-          {/* Notifications Dropdown */}
-          {isNotificationsOpen && (
-            <div className="absolute top-12 right-0 w-80 bg-zinc-800 border border-white/10 rounded-xl shadow-2xl overflow-hidden">
-              <div className="p-3 border-b border-white/10 flex justify-between items-center">
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Notifications</span>
-                {notifications.length > 0 && (
-                  <button onClick={clear} className="text-[10px] text-blue-500 hover:text-blue-400 font-bold uppercase">Clear all</button>
-                )}
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-zinc-500 text-sm italic">No notifications yet</div>
-                ) : (
-                  notifications.map((n) => (
-                    <div key={n._id} className="group p-3 border-b border-white/5 text-sm hover:bg-white/5 flex justify-between items-start gap-4">
-                      <p className="text-zinc-300 leading-snug">
-                        {n.message || (
-                          <>
-                            <span className="font-bold text-white">{n.title}</span> was {n.type.split('_').pop().toLowerCase()}
-                          </>
-                        )}
-                      </p>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); removeNotification(n._id); }}
-                        className="text-zinc-600 hover:text-white transition-colors"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
+          {/* User Avatar & Menu */}
+          <div className="relative z-50">
+            <div data-cy="nav-avatar" onClick={() => { setAvatarMenuOpen(!avatarMenuOpen); setIsNotificationsOpen(false); setMobileMenuOpen(false); }}>
+              <UserAvatar user={user} />
             </div>
-          )}
-        </div>
-
-        {/* User Avatar & Menu */}
-        <div className="relative z-50">
-          <div data-cy="nav-avatar" onClick={() => { setAvatarMenuOpen(!avatarMenuOpen); setIsNotificationsOpen(false); }}>
-            <UserAvatar user={user} />
+            {avatarMenuOpen && (
+              <div className="absolute top-10 right-0 w-48 bg-zinc-800 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <button onClick={onLogout} className="w-full text-left p-3 text-sm text-red-500 hover:bg-white/5">Logout</button>
+              </div>
+            )}
           </div>
-          {avatarMenuOpen && (
-            <div className="absolute top-10 right-0 w-48 bg-zinc-800 border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
-              <button onClick={onLogout} className="w-full text-left p-3 text-sm text-red-500 hover:bg-white/5">Logout</button>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Mobile Dropdown Menu */}
+      {mobileMenuOpen && (
+        <div className="flex sm:hidden flex-col border-t border-white/5 bg-zinc-900 z-50 relative">
+          {navLinks.map(({ to, label }) => (
+            <Link
+              key={to}
+              to={to}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`px-5 py-3 text-sm font-medium border-b border-white/5 transition-colors ${location.pathname === to ? 'text-white bg-zinc-800' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

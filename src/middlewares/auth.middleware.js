@@ -19,7 +19,7 @@ const auth = async (req, res, next) => {
                 method: req.method,
                 correlationId: req.correlationId,
             });
-            throw new ApiError(401, "Unauthorized: No Token Provided");
+            throw new ApiError(401, "You are not authorized");
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -40,7 +40,7 @@ const auth = async (req, res, next) => {
             method: req.method,
             correlationId: req.correlationId,
         });
-        return next(new ApiError(401, "Unauthorized: Invalid Token"));
+        return next(new ApiError(401, "You are not authorized"));
     }
 };
 

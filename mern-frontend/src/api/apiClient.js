@@ -25,6 +25,13 @@ apiClient.interceptors.response.use(
         return response.data;
     },
     (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.replace('/');
+            return Promise.reject(new Error('You are not authorized'));
+        }
+
         let errorMessage = "An unexpected error occured. Try again after sometime.";
         if(error.response) {
             errorMessage = error.response.data?.message || errorMessage;

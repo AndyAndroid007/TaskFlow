@@ -10,16 +10,14 @@ const DEFAULT_SYSTEM_PROMPT = [
 
 function buildClassificationPrompt(message) {
     return [
-        'Classify the following user message into exactly one of these intents:',
-        'SUGGEST_TASKS, CREATE_TASK, DELETE_TASK, GENERAL_CHAT',
+        'Classify the user message into exactly one intent label. Reply with ONLY the label, nothing else.',
         '',
-        'Rules:',
-        '- SUGGEST_TASKS: user wants help deciding what to work on, wants you to prioritize their day, or asks for recommendations.',
+        'Intents:',
+        '- SUGGEST_TASKS: user wants help deciding what to work on, wants tasks prioritized, or asks for recommendations.',
         '- CREATE_TASK: user wants to create a new task, ticket, todo, or reminder.',
+        '- UPDATE_TASK: user wants to update, change, modify, or edit an existing task\'s fields (title, priority, due date, status, tags, or description).',
         '- DELETE_TASK: user wants to delete, remove, or clear a task.',
-        '- GENERAL_CHAT: asking about how many tasks they have, listing tasks without asking for priority, or general conversation.',
-        '',
-        'Reply with only the intent label, nothing else.',
+        '- GENERAL_CHAT: listing tasks without prioritization, asking how many tasks exist, or general conversation.',
         '',
         `Message: "${message}"`,
     ].join('\n');
@@ -41,7 +39,7 @@ function buildExtractionPrompt(extracted) {
     const currentState = [
         `- title: ${extracted.title || 'Unknown'}`,
         `- description: ${extracted.description || 'Unknown'}`,
-        `- priority: ${extracted.priority || 'Medium'}`, // default to Medium
+        `- priority: ${extracted.priority || 'Medium'}`,
         `- dueDate: ${extracted.dueDate || 'Unknown'}`,
         `- tags: ${Array.isArray(extracted.tags) && extracted.tags.length ? extracted.tags.join(', ') : 'Unknown'}`,
     ].join('\n');
@@ -51,10 +49,11 @@ function buildExtractionPrompt(extracted) {
         currentState,
         '',
         'Instructions:',
-        '1. If the title is known, you MUST immediately call the propose_task tool with the task details. DO NOT ask for missing fields; use reasonable defaults or leave them empty/null.',
+        '1. If the title is known, you MUST immediately call the propose_task tool with ALL task details — including ALL fields shown above that are already known, not just the newly mentioned ones. DO NOT omit previously-known fields from the tool call.',
         '2. If the title is Unknown, ask the user a single question to determine what the task is about.',
         '3. If you have enough context to infer a title from the conversation, just use it and call the tool.',
         '4. Only populate the description field if the user explicitly provided details for it. DO NOT use conversational filler (like "Personal" or "Yes") as a description.',
+        '5. When the user is refining an existing proposal (e.g. "change priority to High"), update that field and preserve all other known fields in the tool call.',
     ].join('\n');
 }
 

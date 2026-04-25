@@ -168,9 +168,7 @@ function indicatesOtherAssignee(message) {
         || normalized === 'yep';
 }
 
-function sanitizeUserLabel(user) {
-    return user.name || user.email;
-}
+
 
 async function resolveAssigneeFromMessage(message, currentUserId) {
     const normalized = normalizeMessage(message);
@@ -372,34 +370,41 @@ async function handleCreateTask(conversation, correlationId) {
     conversation.activeIntent = INTENTS.CREATE_TASK;
 
     if (response.type === 'function_call' && response.functionCall?.name === 'propose_task') {
-        const proposal = response.functionCall.args || {};
+        const freshFields = response.functionCall.args || {};
         
-        if (conversation.pendingTaskProposal && conversation.pendingTaskProposal.assignee) {
-            const updatedProposal = {
-                ...proposal,
-                assignee: conversation.pendingTaskProposal.assignee,
-            };
-            conversation.pendingTaskProposal = updatedProposal;
+        if (conversation.pendingTaskProposal) {
+            // Refinement path: user sent a follow-up like "set priority to High and due date tomorrow".
+            // Merge: existing proposal is the base; only override fields the LLM explicitly returned.
+            const existing = conversation.pendingTaskProposal;
+            const mergedProposal = { ...existing };
+
+            if (freshFields.title && freshFields.title !== 'Unknown') mergedProposal.title = freshFields.title;
+            if (freshFields.description != null) mergedProposal.description = freshFields.description;
+            if (freshFields.priority) mergedProposal.priority = freshFields.priority;
+            if (freshFields.dueDate) mergedProposal.dueDate = freshFields.dueDate;
+            if (Array.isArray(freshFields.tags) && freshFields.tags.length > 0) mergedProposal.tags = freshFields.tags;
+
+            conversation.pendingTaskProposal = mergedProposal;
             conversation.markModified('pendingTaskProposal');
             conversation.taskCreationState = null;
             conversation.markModified('taskCreationState');
-            appendMessage(conversation, 'model', CREATE_TASK_CONFIRMATION_REPLY);
 
-            logger.info('AI task proposal updated via tool', {
-                correlationId,
-            });
+            const reply = "I've updated the proposal with your changes. Does this look right?";
+            appendMessage(conversation, 'model', reply);
+
+            logger.info('AI task proposal refined via follow-up', { correlationId });
 
             return {
                 intent: INTENTS.CREATE_TASK,
-                reply: CREATE_TASK_CONFIRMATION_REPLY,
-                taskProposal: updatedProposal,
+                reply,
+                taskProposal: mergedProposal,
             };
         } else {
             conversation.pendingTaskProposal = null;
             conversation.markModified('pendingTaskProposal');
             conversation.taskCreationState = {
                 stage: 'awaiting_assignee_decision',
-                draftTaskProposal: proposal,
+                draftTaskProposal: freshFields,
             };
             conversation.markModified('taskCreationState');
             appendMessage(conversation, 'model', ASSIGNEE_DECISION_REPLY);
@@ -420,10 +425,15 @@ async function handleCreateTask(conversation, correlationId) {
     const reply = response.type === 'text' && response.text ? response.text : FALLBACK_REPLY;
     appendMessage(conversation, 'model', reply);
 
+    // If there's already a pending proposal and the LLM responded with text
+    // (e.g. it got confused after the assignee flow), keep the existing proposal
+    // visible so the card stays intact for the user.
+    const existingProposal = conversation.pendingTaskProposal || null;
+
     return {
         intent: INTENTS.CREATE_TASK,
         reply,
-        taskProposal: null,
+        taskProposal: existingProposal,
     };
 }
 
@@ -458,6 +468,7 @@ async function handleGeneralChat(userId, conversation, correlationId) {
 }
 
 async function handleDeleteTask(userId, conversation, correlationId) {
+    conversation.activeIntent = INTENTS.DELETE_TASK;
     const tasks = await taskService.getTasksByUser(userId);
     const taskSummary = tasks.length > 0 
         ? `Here are the user's current tasks:\n${tasks.map(t => `- ID: ${t._id} | Title: ${t.title}`).join('\n')}`
@@ -510,12 +521,19 @@ async function handleDeleteTask(userId, conversation, correlationId) {
 }
 
 async function handleUpdateTask(userId, conversation, correlationId) {
+    conversation.activeIntent = INTENTS.UPDATE_TASK;
     const tasks = await taskService.getTasksByUser(userId);
     const taskSummary = tasks.length > 0 
         ? `User's current tasks:\n${tasks.map(t => `- ID: ${t._id} | Title: ${t.title} | Priority: ${t.priority} | Status: ${t.status}`).join('\n')}`
         : 'No tasks found.';
 
-    const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nTASK LIST:\n${taskSummary}\n\nInstructions:\n1. If the user wants to update a task and specifies which one (e.g., by name, ID, or 'this' if it's the only one), call the propose_update tool with the taskId and the new field values.\n2. If the user has only ONE task and says "update it" or "update this task", proceed with that task.\n3. Only include the fields that need updating.`;
+    let currentProposalContext = '';
+    if (conversation.pendingTaskProposal && conversation.pendingTaskProposal.action === 'update') {
+        const p = conversation.pendingTaskProposal;
+        currentProposalContext = `\n\nCURRENT PENDING UPDATES for task "${p.taskTitle}" (not yet applied):\n${JSON.stringify(p.updates, null, 2)}`;
+    }
+
+    const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nTASK LIST:\n${taskSummary}${currentProposalContext}\n\nInstructions:\n1. If the user wants to update a task and specifies which one, call the propose_update tool.\n2. If there are CURRENT PENDING UPDATES shown above, the user is refining them. Provide the new values for the fields the user is mentioning.\n3. For tags, if the user wants to "remove" a tag, provide the new complete list of tags excluding the removed one.`;
 
     const tools = [{
         functionDeclarations: [{
@@ -528,7 +546,7 @@ async function handleUpdateTask(userId, conversation, correlationId) {
                     title: { type: 'STRING' },
                     description: { type: 'STRING' },
                     priority: { type: 'STRING', enum: ['Low', 'Medium', 'High'] },
-                    status: { type: 'STRING', enum: ['Open', 'In Progress', 'Completed'] },
+                    status: { type: 'STRING', enum: ['Open', 'In Progress', 'In Review', 'Completed'] },
                     dueDate: { type: 'STRING' },
                     tags: { type: 'ARRAY', items: { type: 'STRING' } }
                 },
@@ -544,16 +562,39 @@ async function handleUpdateTask(userId, conversation, correlationId) {
     });
 
     if (response.type === 'function_call' && response.functionCall?.name === 'propose_update') {
-        const { taskId, ...updates } = response.functionCall.args;
+        const { taskId, ...freshUpdates } = response.functionCall.args;
         const task = tasks.find(t => String(t._id) === String(taskId));
         
         if (task) {
+            let finalUpdates = freshUpdates;
+            let finalTaskData;
+
+            // If we're refining an existing update proposal for the SAME task, merge them.
+            if (conversation.pendingTaskProposal && 
+                conversation.pendingTaskProposal.action === 'update' && 
+                String(conversation.pendingTaskProposal.taskId) === String(taskId)) {
+                
+                finalUpdates = {
+                    ...conversation.pendingTaskProposal.updates,
+                    ...freshUpdates
+                };
+                finalTaskData = {
+                    ...task.toObject(),
+                    ...finalUpdates
+                };
+            } else {
+                finalTaskData = {
+                    ...task.toObject(),
+                    ...freshUpdates
+                };
+            }
+
             const proposal = {
                 action: 'update',
                 taskId: task._id,
                 taskTitle: task.title,
-                updates: updates,
-                taskData: { ...task.toObject(), ...updates },
+                updates: finalUpdates,
+                taskData: finalTaskData,
                 originalTask: task.toObject()
             };
             conversation.pendingTaskProposal = proposal;
@@ -648,7 +689,11 @@ async function confirmTask(userId, confirmed, correlationId, updatedData = null)
         conversation.markModified('taskCreationState');
         conversation.activeIntent = null;
         
-        const reply = proposal.action === 'delete' ? "Deletion cancelled." : "Update cancelled.";
+        const reply = proposal.action === 'delete'
+            ? 'Deletion cancelled.'
+            : proposal.action === 'update'
+                ? 'Update cancelled.'
+                : 'Task creation cancelled.';
         appendMessage(conversation, 'model', reply);
         touchConversation(conversation);
         await conversation.save();
