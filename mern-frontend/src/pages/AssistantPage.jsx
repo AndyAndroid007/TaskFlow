@@ -52,23 +52,31 @@ function AssistantPage({
             <div className="pointer-events-none absolute inset-0">
                 <div className="absolute inset-y-10 left-0 w-px bg-gradient-to-b from-transparent via-cyan-400/40 to-transparent" />
                 <div className="absolute inset-y-10 right-0 w-px bg-gradient-to-b from-transparent via-blue-500/35 to-transparent" />
+                
+                {/* Mesh Gradient Blurs */}
                 <div className="absolute left-[-10rem] top-24 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
                 <div className="absolute bottom-16 right-[-8rem] h-72 w-72 rounded-full bg-blue-600/12 blur-3xl" />
+                <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-indigo-500/8 blur-[120px]" />
+                <div className="absolute top-1/2 right-1/4 h-96 w-96 rounded-full bg-purple-600/8 blur-[120px]" />
+                
                 <div className="absolute left-1/2 top-0 h-px w-[60%] -translate-x-1/2 bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
             </div>
 
             <div className="relative mx-auto flex max-w-6xl flex-col gap-6">
                 {/* Simplified Header */}
-                <div className="flex items-center justify-between rounded-[2rem] border border-white/6 bg-zinc-900/75 px-6 py-5 shadow-[0_30px_120px_rgba(2,6,23,0.65)] backdrop-blur-xl">
-                    <h1 className="text-2xl font-extrabold tracking-tight text-white">
-                        TaskFlow AI
+                <div className="flex items-center justify-between rounded-3xl border border-white/6 bg-zinc-900/75 px-6 py-4 shadow-[0_30px_120px_rgba(2,6,23,0.65)] backdrop-blur-xl">
+                    <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+                        Task<span className="bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">Flow</span> AI
                     </h1>
                     <button
                         type="button"
                         onClick={onResetConversation}
-                        className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:border-cyan-400/20 hover:bg-cyan-400/10"
+                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-zinc-200 transition-all hover:border-cyan-400/40 hover:bg-cyan-400/15 hover:text-white"
                     >
-                        Reset Conversation
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                        </svg>
+                        New Chat
                     </button>
                 </div>
 
@@ -84,14 +92,17 @@ function AssistantPage({
                                 </div>
                             </div>
                         ) : !hasMessages ? (
-                            <div className="flex min-h-[48vh] flex-col items-center justify-center text-center">
-                                <h2 className="mt-5 text-4xl font-bold tracking-tight text-white">
+                            <div className="flex min-h-[48vh] flex-col items-center justify-center text-center px-4">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.1)]">
+                                    Intelligent Assistant
+                                </div>
+                                <h2 className="mt-6 text-4xl font-bold tracking-tight text-white sm:text-5xl">
                                     How can I help you today?
                                 </h2>
-                                <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-400">
-                                    Ask what to work on, generate a new task from plain language, or refine your plan through one continuous conversation.
+                                <p className="mt-4 max-w-md text-base leading-relaxed text-zinc-300">
+                                    Your personal co-pilot for planning, organizing, and executing tasks through natural conversation.
                                 </p>
-                                <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                                <div className="mt-8 grid w-full max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
                                     {STARTER_PROMPTS.map((prompt) => (
                                         <QuickPromptButton key={prompt} prompt={prompt} onClick={handlePromptClick} />
                                     ))}
