@@ -38,6 +38,12 @@ function appendMessage(conversation, role, content) {
     conversation.messages = trimMessages(conversation.messages);
 }
 
+function stripRestrictedFields(data) {
+    if (!data || typeof data !== 'object') return data;
+    const { _id, userId, createdAt, updatedAt, __v, assigneeDisplay, assignmentType, action, taskId, taskTitle, updates, originalTask, ...clean } = data;
+    return clean;
+}
+
 async function getOrCreateConversation(userId) {
     const conversation = await Conversation.findOne({ userId });
     if (conversation) {
@@ -50,6 +56,7 @@ async function getOrCreateConversation(userId) {
 async function classifyIntentWithLlm(message, correlationId) {
     try {
         const classificationPrompt = buildClassificationPrompt(message);
+        console.log('[STAGE]: Intent Classification');
         const response = await callGemini('', [
             { role: 'user', content: classificationPrompt },
         ], {
@@ -128,15 +135,14 @@ function formatTaskSummary(tasks) {
 }
 
 function buildExtractionState(conversation) {
-    const proposal = conversation.pendingTaskProposal
-        || conversation.taskCreationState?.draftTaskProposal
-        || {};
+    const proposal = conversation.pendingTaskProposal || {};
     return {
         title: proposal.title || null,
         description: proposal.description || null,
-        priority: proposal.priority || null,
+        priority: proposal.priority || 'Medium',
         dueDate: proposal.dueDate ? new Date(proposal.dueDate).toISOString().slice(0, 10) : null,
         tags: Array.isArray(proposal.tags) ? proposal.tags : [],
+        assignee: proposal.assigneeDisplay || (proposal.assignee === conversation.userId ? 'me' : null),
     };
 }
 
@@ -178,13 +184,30 @@ async function resolveAssigneeFromMessage(message, currentUserId) {
 
     const users = await userService.getAllUsers();
     const availableUsers = users.filter((user) => String(user._id) !== String(currentUserId));
+
+    // 1. Try exact email match (Highest priority)
+    const exactEmail = availableUsers.find((u) => (u.email || '').toLowerCase() === normalized);
+    if (exactEmail) {
+        return {
+            type: 'other',
+            user: exactEmail,
+        };
+    }
+
+    // 2. Try exact name match
+    const exactName = availableUsers.find((u) => (u.name || '').toLowerCase() === normalized);
+    if (exactName) {
+        return {
+            type: 'other',
+            user: exactName,
+        };
+    }
+
+    // 3. Try partial name matches if no exact match found
     const matches = availableUsers.filter((user) => {
         const name = String(user.name || '').toLowerCase();
-        const email = String(user.email || '').toLowerCase();
-        return name === normalized
-            || email === normalized
-            || (name && normalized.includes(name))
-            || (email && normalized.includes(email));
+        // For names, we allow partial matches if the input is part of the name or vice versa
+        return name && (name.includes(normalized) || normalized.includes(name));
     });
 
     if (matches.length === 1) {
@@ -220,78 +243,7 @@ function finalizeTaskProposal(conversation, proposal, assignee) {
     };
 }
 
-async function handleTaskAssignmentStep(userId, conversation, message) {
-    const draftProposal = conversation.taskCreationState?.draftTaskProposal;
-    if (!draftProposal) {
-        conversation.taskCreationState = null;
-        return {
-            intent: INTENTS.CREATE_TASK,
-            reply: FALLBACK_REPLY,
-            taskProposal: null,
-        };
-    }
-
-    if (conversation.taskCreationState.stage === 'awaiting_assignee_decision') {
-        if (isPersonalAssignmentResponse(message)) {
-            return finalizeTaskProposal(conversation, draftProposal, userId);
-        }
-
-        if (indicatesOtherAssignee(message)) {
-            const resolved = await resolveAssigneeFromMessage(message, userId);
-            if (resolved.type === 'other') {
-                return finalizeTaskProposal(conversation, draftProposal, String(resolved.user._id));
-            }
-
-            conversation.taskCreationState = {
-                ...conversation.taskCreationState,
-                stage: 'awaiting_assignee_identity',
-            };
-            conversation.markModified('taskCreationState');
-
-            const reply = resolved.type === 'ambiguous' ? ASSIGNEE_AMBIGUOUS_REPLY : ASSIGNEE_IDENTITY_REPLY;
-            appendMessage(conversation, 'model', reply);
-            return {
-                intent: INTENTS.CREATE_TASK,
-                reply,
-                taskProposal: null,
-                showUserSelection: true,
-            };
-        }
-
-        appendMessage(conversation, 'model', ASSIGNEE_DECISION_REPLY);
-        return {
-            intent: INTENTS.CREATE_TASK,
-            reply: ASSIGNEE_DECISION_REPLY,
-            taskProposal: null,
-            showUserSelection: true,
-        };
-    }
-
-    if (conversation.taskCreationState.stage === 'awaiting_assignee_identity') {
-        const resolved = await resolveAssigneeFromMessage(message, userId);
-        if (resolved.type === 'self') {
-            return finalizeTaskProposal(conversation, draftProposal, userId);
-        }
-        if (resolved.type === 'other') {
-            return finalizeTaskProposal(conversation, draftProposal, String(resolved.user._id));
-        }
-
-        const reply = resolved.type === 'ambiguous' ? ASSIGNEE_AMBIGUOUS_REPLY : ASSIGNEE_NOT_FOUND_REPLY;
-        appendMessage(conversation, 'model', reply);
-        return {
-            intent: INTENTS.CREATE_TASK,
-            reply,
-            taskProposal: null,
-            showUserSelection: true,
-        };
-    }
-
-    return {
-        intent: INTENTS.CREATE_TASK,
-        reply: FALLBACK_REPLY,
-        taskProposal: null,
-    };
-}
+// Removed handleTaskAssignmentStep as we are moving to a state-driven flow.
 
 async function resolveIntent(message, conversation, correlationId) {
     const ruleMatch = detectIntent(message);
@@ -299,8 +251,9 @@ async function resolveIntent(message, conversation, correlationId) {
         return ruleMatch;
     }
 
-    if (conversation.activeIntent === INTENTS.CREATE_TASK) {
-        return INTENTS.CREATE_TASK;
+    // Preserve multi-step intents if no new intent is explicitly detected.
+    if ([INTENTS.CREATE_TASK, INTENTS.UPDATE_TASK, INTENTS.DELETE_TASK].includes(conversation.activeIntent)) {
+        return conversation.activeIntent;
     }
 
     return classifyIntentWithLlm(message, correlationId);
@@ -311,6 +264,7 @@ async function handleSuggestTasks(userId, conversation, correlationId) {
     const summary = formatTaskSummary(sortTasksForSuggestions(tasks).slice(0, MAX_SUGGESTION_TASKS));
     const prompt = buildSuggestionPrompt(summary);
 
+    console.log('[STAGE]: Task Suggestions');
     const priorMessages = conversation.messages.slice(0, -1);
     const response = await callGemini(DEFAULT_SYSTEM_PROMPT, [
         ...priorMessages,
@@ -319,7 +273,7 @@ async function handleSuggestTasks(userId, conversation, correlationId) {
         temperature: 0.2,
         maxOutputTokens: 128,
     });
-    
+
     const reply = response.type === 'text' ? response.text : FALLBACK_REPLY;
 
     appendMessage(conversation, 'model', reply);
@@ -338,11 +292,13 @@ async function handleSuggestTasks(userId, conversation, correlationId) {
     };
 }
 
-async function handleCreateTask(conversation, correlationId) {
+async function handleCreateTask(userId, conversation, correlationId) {
     const extracted = buildExtractionState(conversation);
     const prompt = buildExtractionPrompt(extracted);
     const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nEXTRACTION MODE:\n${prompt}`;
-    
+
+    console.log('[STAGE]: Task Extraction/Creation');
+
     const tools = [{
         functionDeclarations: [{
             name: 'propose_task',
@@ -354,7 +310,8 @@ async function handleCreateTask(conversation, correlationId) {
                     description: { type: 'STRING', description: 'Details about the task' },
                     priority: { type: 'STRING', enum: ['Low', 'Medium', 'High'], description: 'Task priority' },
                     dueDate: { type: 'STRING', description: 'ISO 8601 date string for due date, if mentioned' },
-                    tags: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Relevant tags' }
+                    tags: { type: 'ARRAY', items: { type: 'STRING' }, description: 'Relevant tags' },
+                    assignee: { type: 'STRING', description: 'The person to assign the task to (e.g., "me", "myself", or a specific name)' }
                 },
                 required: ['title']
             }
@@ -371,55 +328,73 @@ async function handleCreateTask(conversation, correlationId) {
 
     if (response.type === 'function_call' && response.functionCall?.name === 'propose_task') {
         const freshFields = response.functionCall.args || {};
+        const existing = conversation.pendingTaskProposal || {};
         
-        if (conversation.pendingTaskProposal) {
-            // Refinement path: user sent a follow-up like "set priority to High and due date tomorrow".
-            // Merge: existing proposal is the base; only override fields the LLM explicitly returned.
-            const existing = conversation.pendingTaskProposal;
-            const mergedProposal = { ...existing };
+        const mergedProposal = {
+            priority: 'Medium',
+            tags: [],
+            ...existing,
+            ...freshFields
+        };
 
-            if (freshFields.title && freshFields.title !== 'Unknown') mergedProposal.title = freshFields.title;
-            if (freshFields.description != null) mergedProposal.description = freshFields.description;
-            if (freshFields.priority) mergedProposal.priority = freshFields.priority;
-            if (freshFields.dueDate) mergedProposal.dueDate = freshFields.dueDate;
-            if (Array.isArray(freshFields.tags) && freshFields.tags.length > 0) mergedProposal.tags = freshFields.tags;
+        let showUserSelection = false;
+        let reply;
 
-            conversation.pendingTaskProposal = mergedProposal;
-            conversation.markModified('pendingTaskProposal');
-            conversation.taskCreationState = null;
-            conversation.markModified('taskCreationState');
-
-            const reply = "I've updated the proposal with your changes. Does this look right?";
-            appendMessage(conversation, 'model', reply);
-
-            logger.info('AI task proposal refined via follow-up', { correlationId });
-
-            return {
-                intent: INTENTS.CREATE_TASK,
-                reply,
-                taskProposal: mergedProposal,
-            };
-        } else {
-            conversation.pendingTaskProposal = null;
-            conversation.markModified('pendingTaskProposal');
-            conversation.taskCreationState = {
-                stage: 'awaiting_assignee_decision',
-                draftTaskProposal: freshFields,
-            };
-            conversation.markModified('taskCreationState');
-            appendMessage(conversation, 'model', ASSIGNEE_DECISION_REPLY);
-
-            logger.info('AI task proposal generated via tool', {
-                correlationId,
-            });
-
-            return {
-                intent: INTENTS.CREATE_TASK,
-                reply: ASSIGNEE_DECISION_REPLY,
-                taskProposal: null,
-                showUserSelection: true,
-            };
+        if (freshFields.assignee) {
+            const assigneeInput = normalizeMessage(freshFields.assignee);
+            
+            if (indicatesOtherAssignee(assigneeInput) && !availableUsers.some(u => (u.name || '').toLowerCase() === assigneeInput)) {
+                // If it's a generic "assign to someone else" and NOT an exact match for a user named "someone else"
+                showUserSelection = true;
+                reply = "Who should I assign it to? Select from the list or type their name/email.";
+                mergedProposal.assigneeDisplay = freshFields.assignee;
+            } else {
+                const resolved = await resolveAssigneeFromMessage(freshFields.assignee, userId);
+                if (resolved.type === 'other') {
+                    mergedProposal.assignee = String(resolved.user._id);
+                    mergedProposal.assigneeDisplay = resolved.user.name || resolved.user.email;
+                    mergedProposal.assignmentType = 'team';
+                } else if (resolved.type === 'self' || freshFields.assignee === 'me' || freshFields.assignee === 'myself') {
+                    mergedProposal.assignee = userId;
+                    mergedProposal.assigneeDisplay = 'me';
+                    mergedProposal.assignmentType = 'personal';
+                } else if (resolved.type === 'ambiguous') {
+                    mergedProposal.assigneeDisplay = freshFields.assignee;
+                    showUserSelection = true;
+                    reply = ASSIGNEE_AMBIGUOUS_REPLY;
+                } else {
+                    mergedProposal.assigneeDisplay = freshFields.assignee;
+                    showUserSelection = true;
+                    reply = `I couldn't find a user matching "${freshFields.assignee}". You can select from the list or keep it as a personal task.`;
+                }
+            }
+        } else if (!mergedProposal.assignee) {
+            mergedProposal.assignee = userId;
+            mergedProposal.assigneeDisplay = 'me';
+            mergedProposal.assignmentType = 'personal';
         }
+
+        conversation.pendingTaskProposal = mergedProposal;
+        conversation.markModified('pendingTaskProposal');
+        conversation.taskCreationState = null;
+        conversation.markModified('taskCreationState');
+
+        const isRefinement = !!existing.title;
+        if (!reply) {
+            reply = isRefinement 
+                ? "I've updated the proposal with your changes. Does this look right?"
+                : "Here's the task I've structured for you. Does this look right?";
+        }
+        
+        appendMessage(conversation, 'model', reply);
+        logger.info(isRefinement ? 'AI task proposal refined' : 'AI task proposal generated', { correlationId });
+
+        return {
+            intent: INTENTS.CREATE_TASK,
+            reply,
+            taskProposal: mergedProposal,
+            showUserSelection
+        };
     }
 
     const reply = response.type === 'text' && response.text ? response.text : FALLBACK_REPLY;
@@ -441,12 +416,13 @@ async function handleGeneralChat(userId, conversation, correlationId) {
     let reply;
     try {
         const tasks = await taskService.getTasksByUser(userId);
-        const taskSummary = tasks.length > 0 
+        const taskSummary = tasks.length > 0
             ? `Current tasks for the user:\n${formatTaskSummary(tasks)}`
             : 'The user has no tasks currently.';
-            
+
         const contextPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nUSER CONTEXT:\n${taskSummary}`;
 
+        console.log('[STAGE]: General Chat');
         const response = await callGemini(contextPrompt, conversation.messages, {
             temperature: 0.4,
             maxOutputTokens: 128,
@@ -470,12 +446,13 @@ async function handleGeneralChat(userId, conversation, correlationId) {
 async function handleDeleteTask(userId, conversation, correlationId) {
     conversation.activeIntent = INTENTS.DELETE_TASK;
     const tasks = await taskService.getTasksByUser(userId);
-    const taskSummary = tasks.length > 0 
-        ? `Here are the user's current tasks:\n${tasks.map(t => `- ID: ${t._id} | Title: ${t.title}`).join('\n')}`
+    const taskSummary = tasks.length > 0
+        ? `Task Context (INTERNAL USE ONLY - NEVER SHOW IDs):\n${tasks.map(t => `<task id="${t._id}" title="${t.title}" />`).join('\n')}`
         : 'The user has no tasks.';
 
-    const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nTASK LIST:\n${taskSummary}\n\nInstructions:\n1. If the user identifies a specific task to delete (e.g., by name, ID, or by saying 'this' when there's only one task or it was recently discussed), call the propose_deletion tool with its ID.\n2. If the user has only ONE task and says "delete it" or "delete this task", proceed with that task.\n3. If it is truly ambiguous, ask the user to clarify which task from the list above.`;
-    
+    const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\n${taskSummary}\n\nInstructions:\n1. If the user identifies a specific task to delete (e.g., by title, number, or relative position like "the first one"), call the propose_deletion tool with its ID.\n2. CRITICAL: NEVER include the task ID (e.g., '69edc...') in your text response. Refer to tasks only by their titles.\n3. If the user just says "delete the task", "delete it", or "remove a task", YOU MUST NOT call the tool yet, even if there is only one task. Instead, respond with text asking "Which task would you like to delete?" and list the available titles for them to choose from.\n4. DO NOT guess which task the user means based on recency or singular availability. Always force the user to identify the task by title or number first.`;
+    console.log('[STAGE]: Task Deletion');
+
     const tools = [{
         functionDeclarations: [{
             name: 'propose_deletion',
@@ -499,7 +476,7 @@ async function handleDeleteTask(userId, conversation, correlationId) {
     if (response.type === 'function_call' && response.functionCall?.name === 'propose_deletion') {
         const { taskId } = response.functionCall.args;
         const task = tasks.find(t => String(t._id) === String(taskId));
-        
+
         if (task) {
             const proposal = {
                 action: 'delete',
@@ -522,9 +499,11 @@ async function handleDeleteTask(userId, conversation, correlationId) {
 
 async function handleUpdateTask(userId, conversation, correlationId) {
     conversation.activeIntent = INTENTS.UPDATE_TASK;
+    const users = await userService.getAllUsers();
+    const availableUsers = users.filter((user) => String(user._id) !== String(userId));
     const tasks = await taskService.getTasksByUser(userId);
-    const taskSummary = tasks.length > 0 
-        ? `User's current tasks:\n${tasks.map(t => `- ID: ${t._id} | Title: ${t.title} | Priority: ${t.priority} | Status: ${t.status}`).join('\n')}`
+    const taskSummary = tasks.length > 0
+        ? `Task Context (INTERNAL USE ONLY - NEVER SHOW IDs):\n${tasks.map(t => `<task id="${t._id}" title="${t.title}" priority="${t.priority}" status="${t.status}" />`).join('\n')}`
         : 'No tasks found.';
 
     let currentProposalContext = '';
@@ -533,7 +512,8 @@ async function handleUpdateTask(userId, conversation, correlationId) {
         currentProposalContext = `\n\nCURRENT PENDING UPDATES for task "${p.taskTitle}" (not yet applied):\n${JSON.stringify(p.updates, null, 2)}`;
     }
 
-    const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nTASK LIST:\n${taskSummary}${currentProposalContext}\n\nInstructions:\n1. If the user wants to update a task and specifies which one, call the propose_update tool.\n2. If there are CURRENT PENDING UPDATES shown above, the user is refining them. Provide the new values for the fields the user is mentioning.\n3. For tags, if the user wants to "remove" a tag, provide the new complete list of tags excluding the removed one.`;
+    const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\n${taskSummary}${currentProposalContext}\n\nInstructions:\n1. If the user identifies a specific task to update (e.g., by title, number, or relative position like "the first one") AND specifies what to change, call the propose_update tool.\n2. CRITICAL: NEVER include internal IDs (e.g., '69edc...') in your text response. Refer to tasks only by title.\n3. If the user just says "update", "update the task", "edit", or "change something" without specifying WHICH task or WHAT to change, YOU MUST NOT CALL THE TOOL. Instead, respond with text asking for clarification.\n4. DO NOT guess, assume, or suggest random edits. If the user is ambiguous, ask for clarification.\n5. If there are CURRENT PENDING UPDATES shown above, the user is refining them.\n6. For tags, if the user wants to "remove" a tag, provide the new complete list of tags excluding the removed one.\n7. For assignments, if the user says "assign to me", provide "me" for the assignee field.`;
+    console.log('[STAGE]: Task Update');
 
     const tools = [{
         functionDeclarations: [{
@@ -548,7 +528,8 @@ async function handleUpdateTask(userId, conversation, correlationId) {
                     priority: { type: 'STRING', enum: ['Low', 'Medium', 'High'] },
                     status: { type: 'STRING', enum: ['Open', 'In Progress', 'In Review', 'Completed'] },
                     dueDate: { type: 'STRING' },
-                    tags: { type: 'ARRAY', items: { type: 'STRING' } }
+                    tags: { type: 'ARRAY', items: { type: 'STRING' } },
+                    assignee: { type: 'STRING', description: 'The person to assign the task to (e.g., "me", "myself", or a specific name)' }
                 },
                 required: ['taskId']
             }
@@ -563,20 +544,59 @@ async function handleUpdateTask(userId, conversation, correlationId) {
 
     if (response.type === 'function_call' && response.functionCall?.name === 'propose_update') {
         const { taskId, ...freshUpdates } = response.functionCall.args;
+
+        // Guard: If the model called the tool but didn't provide any actual updates, reject it.
+        if (Object.keys(freshUpdates).length === 0) {
+            const reply = "I understand you want to update the task. What exactly would you like to change?";
+            appendMessage(conversation, 'model', reply);
+            return { intent: INTENTS.UPDATE_TASK, reply, taskProposal: null };
+        }
+
         const task = tasks.find(t => String(t._id) === String(taskId));
-        
+
         if (task) {
             let finalUpdates = freshUpdates;
+            let showUserSelection = false;
+            let reply;
+
+            if (freshUpdates.assignee) {
+                const assigneeInput = normalizeMessage(freshUpdates.assignee);
+                if (indicatesOtherAssignee(assigneeInput) && !availableUsers.some(u => (u.name || '').toLowerCase() === assigneeInput)) {
+                    showUserSelection = true;
+                    reply = "Who should I assign it to? Select from the list or type their name/email.";
+                    finalUpdates.assigneeDisplay = freshUpdates.assignee;
+                } else {
+                    const resolved = await resolveAssigneeFromMessage(freshUpdates.assignee, userId);
+                    if (resolved.type === 'other') {
+                        finalUpdates.assignee = String(resolved.user._id);
+                        finalUpdates.assigneeDisplay = resolved.user.name || resolved.user.email;
+                        finalUpdates.assignmentType = 'team';
+                    } else if (resolved.type === 'self' || freshUpdates.assignee === 'me' || freshUpdates.assignee === 'myself') {
+                        finalUpdates.assignee = userId;
+                        finalUpdates.assigneeDisplay = 'me';
+                        finalUpdates.assignmentType = 'personal';
+                    } else if (resolved.type === 'ambiguous') {
+                        finalUpdates.assigneeDisplay = freshUpdates.assignee;
+                        showUserSelection = true;
+                        reply = ASSIGNEE_AMBIGUOUS_REPLY;
+                    } else {
+                        finalUpdates.assigneeDisplay = freshUpdates.assignee;
+                        showUserSelection = true;
+                        reply = `I couldn't find a user matching "${freshUpdates.assignee}". You can select from the list or keep it as a personal task.`;
+                    }
+                }
+            }
+
             let finalTaskData;
 
             // If we're refining an existing update proposal for the SAME task, merge them.
-            if (conversation.pendingTaskProposal && 
-                conversation.pendingTaskProposal.action === 'update' && 
+            if (conversation.pendingTaskProposal &&
+                conversation.pendingTaskProposal.action === 'update' &&
                 String(conversation.pendingTaskProposal.taskId) === String(taskId)) {
-                
+
                 finalUpdates = {
                     ...conversation.pendingTaskProposal.updates,
-                    ...freshUpdates
+                    ...finalUpdates
                 };
                 finalTaskData = {
                     ...task.toObject(),
@@ -585,7 +605,7 @@ async function handleUpdateTask(userId, conversation, correlationId) {
             } else {
                 finalTaskData = {
                     ...task.toObject(),
-                    ...freshUpdates
+                    ...finalUpdates
                 };
             }
 
@@ -599,9 +619,13 @@ async function handleUpdateTask(userId, conversation, correlationId) {
             };
             conversation.pendingTaskProposal = proposal;
             conversation.markModified('pendingTaskProposal');
-            const reply = `I've prepared the updates for "${task.title}". Should I apply them?`;
+            
+            if (!reply) {
+                reply = `I've prepared the updates for "${task.title}". Should I apply them?`;
+            }
+            
             appendMessage(conversation, 'model', reply);
-            return { intent: INTENTS.UPDATE_TASK, reply, taskProposal: proposal };
+            return { intent: INTENTS.UPDATE_TASK, reply, taskProposal: proposal, showUserSelection };
         }
     }
 
@@ -616,12 +640,7 @@ async function chat(userId, message, correlationId) {
     appendMessage(conversation, 'user', message);
 
     try {
-        if (conversation.taskCreationState?.stage) {
-            const response = await handleTaskAssignmentStep(userId, conversation, message);
-            touchConversation(conversation);
-            await conversation.save();
-            return response;
-        }
+        // Removed the explicit stage handling to allow for intent-based state updates.
 
         const intent = await resolveIntent(message, conversation, correlationId);
         let response;
@@ -642,7 +661,7 @@ async function chat(userId, message, correlationId) {
         if (intent === INTENTS.SUGGEST_TASKS) {
             response = await handleSuggestTasks(userId, conversation, correlationId);
         } else if (intent === INTENTS.CREATE_TASK) {
-            response = await handleCreateTask(conversation, correlationId);
+            response = await handleCreateTask(userId, conversation, correlationId);
         } else if (intent === INTENTS.DELETE_TASK) {
             response = await handleDeleteTask(userId, conversation, correlationId);
         } else if (intent === INTENTS.UPDATE_TASK) {
@@ -688,7 +707,7 @@ async function confirmTask(userId, confirmed, correlationId, updatedData = null)
         conversation.taskCreationState = null;
         conversation.markModified('taskCreationState');
         conversation.activeIntent = null;
-        
+
         const reply = proposal.action === 'delete'
             ? 'Deletion cancelled.'
             : proposal.action === 'update'
@@ -713,7 +732,7 @@ async function confirmTask(userId, confirmed, correlationId, updatedData = null)
         reply = `Task "${proposal.taskTitle}" deleted successfully.`;
         result = { intent: INTENTS.DELETE_TASK, reply, taskProposal: null };
     } else if (proposal.action === 'update') {
-        const updateData = updatedData || proposal.updates;
+        const updateData = stripRestrictedFields(updatedData || proposal.updates);
         const updated = await taskService.updateTask(userId, proposal.taskId, {
             ...updateData,
             correlationId,
@@ -722,7 +741,7 @@ async function confirmTask(userId, confirmed, correlationId, updatedData = null)
         result = { intent: INTENTS.UPDATE_TASK, reply, taskProposal: null, task: updated };
     } else {
         // Fallback to creation logic
-        const taskData = updatedData || proposal;
+        const taskData = stripRestrictedFields(updatedData || proposal);
         const task = await taskService.createTask(userId, {
             ...taskData,
             assignee: taskData.assignee || userId,
@@ -770,7 +789,7 @@ async function getConversation(userId) {
         };
     }
 
-    const showUserSelection = !!(conversation.taskCreationState && 
+    const showUserSelection = !!(conversation.taskCreationState &&
         ['awaiting_assignee_decision', 'awaiting_assignee_identity'].includes(conversation.taskCreationState.stage));
 
     return {

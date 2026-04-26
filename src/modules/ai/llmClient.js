@@ -66,6 +66,18 @@ async function callGemini(systemPrompt, history, options = {}) {
         body.toolConfig = options.toolConfig;
     }
 
+    // --- DEBUG LOGS FOR LLM INJECTION ---
+    console.log('\n--- LLM INJECTION START ---');
+    if (systemPrompt) {
+        console.log('[SYSTEM PROMPT]:\n', systemPrompt);
+    }
+    console.log('[CONVERSATION HISTORY]:\n', JSON.stringify(formattedHistory, null, 2));
+    if (options.tools) {
+        console.log('[TOOLS]:\n', JSON.stringify(options.tools, null, 2));
+    }
+    console.log('--- LLM INJECTION END ---\n');
+    // ------------------------------------
+
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {

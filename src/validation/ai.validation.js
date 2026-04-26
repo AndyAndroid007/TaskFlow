@@ -14,7 +14,7 @@ const confirmTaskSchema = Joi.object({
         dueDate: Joi.date().iso().allow(null),
         assignee: Joi.string().allow(null, ''),
         tags: Joi.array().items(Joi.string().trim().max(30))
-    }).allow(null).optional()
+    }).allow(null).optional().unknown(true)
 });
 
 module.exports = {

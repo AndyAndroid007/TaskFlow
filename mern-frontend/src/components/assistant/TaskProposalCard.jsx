@@ -1,5 +1,5 @@
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
+ 
 export default function TaskProposalCard({ proposal, currentUserId, users = [], onConfirm, disabled }) {
     const isDelete = proposal.action === "delete";
     const isUpdate = proposal.action === "update";
@@ -7,6 +7,11 @@ export default function TaskProposalCard({ proposal, currentUserId, users = [], 
     
     const [isEditing, setIsEditing] = useState(false);
     const [editedProposal, setEditedProposal] = useState(displayTask);
+
+    // Synchronize internal state with props when the proposal is refined by AI
+    useEffect(() => {
+        setEditedProposal(displayTask);
+    }, [displayTask]);
 
     const handleChange = (field, value) => {
         setEditedProposal((prev) => ({ ...prev, [field]: value }));
@@ -32,7 +37,11 @@ export default function TaskProposalCard({ proposal, currentUserId, users = [], 
                 <div className="mt-2 space-y-1">
                     {hasChanged && !isEditing && (
                         <p className="text-[10px] text-zinc-500 line-through">
-                            {isDate && originalValue ? new Date(originalValue).toISOString().split('T')[0] : String(originalValue || "None")}
+                            {isDate && originalValue 
+                                ? new Date(originalValue).toISOString().split('T')[0] 
+                                : (field === "assignee" 
+                                    ? (String(originalValue) === String(currentUserId) ? "Personal task" : (users.find(u => String(u._id) === String(originalValue))?.name || "Assigned"))
+                                    : String(originalValue || "None"))}
                         </p>
                     )}
                     {isEditing && !isDelete ? (

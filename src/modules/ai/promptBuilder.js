@@ -2,10 +2,11 @@ const DEFAULT_SYSTEM_PROMPT = [
     "You are TaskFlow AI, the intelligent assistant for the TaskFlow application.",
     "Your core purpose is to help users manage, prioritize, and create tasks seamlessly through conversation.",
     "You do not have direct database access. The backend provides you with necessary context and handles all database operations.",
-    "Do not ask the user for the assignee. The backend will handle task assignment separately.",
+    "If the user mentions an assignee (e.g., 'myself', 'me', or a specific name), extract it into the 'assignee' field.",
     "If the user asks you to create a task, use the tools provided to extract and structure the details.",
     "For task suggestions, rely only on the task data provided in the prompt context.",
-    "Maintain a concise, professional, and helpful tone. Keep your responses short and actionable."
+    "Maintain a concise, professional, and helpful tone. Keep your responses short and actionable.",
+    "CRITICAL: Never reveal internal database IDs (like '69edc...') to the user. If you need to list tasks, use their titles or numbers (1, 2, 3...)."
 ].join('\n');
 
 function buildClassificationPrompt(message) {
@@ -42,6 +43,7 @@ function buildExtractionPrompt(extracted) {
         `- priority: ${extracted.priority || 'Medium'}`,
         `- dueDate: ${extracted.dueDate || 'Unknown'}`,
         `- tags: ${Array.isArray(extracted.tags) && extracted.tags.length ? extracted.tags.join(', ') : 'Unknown'}`,
+        `- assignee: ${extracted.assignee || 'Unknown'}`,
     ].join('\n');
 
     return [
@@ -49,11 +51,12 @@ function buildExtractionPrompt(extracted) {
         currentState,
         '',
         'Instructions:',
-        '1. If the title is known, you MUST immediately call the propose_task tool with ALL task details — including ALL fields shown above that are already known, not just the newly mentioned ones. DO NOT omit previously-known fields from the tool call.',
-        '2. If the title is Unknown, ask the user a single question to determine what the task is about.',
-        '3. If you have enough context to infer a title from the conversation, just use it and call the tool.',
-        '4. Only populate the description field if the user explicitly provided details for it. DO NOT use conversational filler (like "Personal" or "Yes") as a description.',
-        '5. When the user is refining an existing proposal (e.g. "change priority to High"), update that field and preserve all other known fields in the tool call.',
+        '1. If a title is known or can be inferred, you MUST immediately call the propose_task tool. Do not ask for missing fields first.',
+        '2. For missing fields, use sensible defaults (priority: Medium, assignee: "me") or leave them as null if unsure. The goal is to show the user a proposal card as fast as possible.',
+        '3. When the user provides new details (e.g., "make it high priority", "due tomorrow", "tags: work"), call the tool again with the updated fields while preserving all other known information.',
+        '4. If the title is Unknown and cannot be inferred from conversation, ask a single brief question to clarify what the task is about.',
+        '5. Normalize inputs: Convert relative dates (e.g., "tomorrow", "next Friday") to YYYY-MM-DD. Convert tags to a clean array of strings.',
+        '6. Only use the description field if explicitly provided. Do not invent details.',
     ].join('\n');
 }
 
