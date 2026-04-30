@@ -14,7 +14,9 @@ app.use(correlationId);
 app.use(httpLogger);
 app.use(express.json());
 app.use(passport.initialize());
-
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
 const userRoutes = require("./routes/user.routes");
 const authRoutes = require("./routes/auth.routes");
 const taskRoutes = require("./routes/task.routes");
