@@ -33,10 +33,10 @@ async (accessToken, refreshToken, profile, done) => {
     }
 }));
 
-registerStrategy('github', ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'GITHUB_CALLBACK_URL'], () => new GitHubStrategy({
+registerStrategy('github', ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'BACKEND_URL'], () => new GitHubStrategy({
     clientID: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    callbackURL: process.env.GITHUB_CALLBACK_URL,
+    callbackURL: `${process.env.BACKEND_URL}/auth/github/callback`,
 },
 async (accessToken, refreshToken, profile, done) => {
     try {
@@ -67,10 +67,10 @@ async (accessToken, refreshToken, profile, done) => {
     }
 }));
 
-registerStrategy('linkedin', ['LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET', 'LINKEDIN_CALLBACK_URL'], () => new LinkedInStrategy({
+registerStrategy('linkedin', ['LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET', 'BACKEND_URL'], () => new LinkedInStrategy({
     clientID: process.env.LINKEDIN_CLIENT_ID,
     clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
-    callbackURL: process.env.LINKEDIN_CALLBACK_URL,
+    callbackURL: `${process.env.BACKEND_URL}/auth/linkedin/callback`,
     scope: ['openid', 'profile', 'email'],
     skipUserProfile: true,
     userProfileURL: 'https://api.linkedin.com/v2/userinfo',
