@@ -117,22 +117,20 @@ function AssistantPage({
                                     />
                                 ))}
 
-                                {pendingTaskProposal && (
-                                    <TaskProposalCard
-                                        proposal={pendingTaskProposal}
-                                        currentUserId={currentUserId}
-                                        users={users}
-                                        onConfirm={onConfirmTask}
-                                        disabled={isSending}
-                                    />
-                                )}
-
-                                {showUserSelection && (
+                                {showUserSelection ? (
                                     <AssigneeSelectionCard
                                         users={users}
                                         currentUserId={currentUserId}
                                         onSelect={(val) => onSubmitMessage(val)}
                                         onCancel={onResetConversation}
+                                        disabled={isSending}
+                                    />
+                                ) : pendingTaskProposal && (
+                                    <TaskProposalCard
+                                        proposal={pendingTaskProposal}
+                                        currentUserId={currentUserId}
+                                        users={users}
+                                        onConfirm={onConfirmTask}
                                         disabled={isSending}
                                     />
                                 )}

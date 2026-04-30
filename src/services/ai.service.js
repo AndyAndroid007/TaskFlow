@@ -56,7 +56,7 @@ async function getOrCreateConversation(userId) {
 async function classifyIntentWithLlm(message, correlationId) {
     try {
         const classificationPrompt = buildClassificationPrompt(message);
-        console.log('[STAGE]: Intent Classification');
+        // console.log('[STAGE]: Intent Classification');
         const response = await callGemini('', [
             { role: 'user', content: classificationPrompt },
         ], {
@@ -264,7 +264,7 @@ async function handleSuggestTasks(userId, conversation, correlationId) {
     const summary = formatTaskSummary(sortTasksForSuggestions(tasks).slice(0, MAX_SUGGESTION_TASKS));
     const prompt = buildSuggestionPrompt(summary);
 
-    console.log('[STAGE]: Task Suggestions');
+    // console.log('[STAGE]: Task Suggestions');
     const priorMessages = conversation.messages.slice(0, -1);
     const response = await callGemini(DEFAULT_SYSTEM_PROMPT, [
         ...priorMessages,
@@ -293,11 +293,13 @@ async function handleSuggestTasks(userId, conversation, correlationId) {
 }
 
 async function handleCreateTask(userId, conversation, correlationId) {
+    const users = await userService.getAllUsers();
+    const availableUsers = users.filter((u) => String(u._id) !== String(userId));
     const extracted = buildExtractionState(conversation);
     const prompt = buildExtractionPrompt(extracted);
     const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nEXTRACTION MODE:\n${prompt}`;
 
-    console.log('[STAGE]: Task Extraction/Creation');
+    // console.log('[STAGE]: Task Extraction/Creation');
 
     const tools = [{
         functionDeclarations: [{
@@ -422,7 +424,7 @@ async function handleGeneralChat(userId, conversation, correlationId) {
 
         const contextPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\nUSER CONTEXT:\n${taskSummary}`;
 
-        console.log('[STAGE]: General Chat');
+        // console.log('[STAGE]: General Chat');
         const response = await callGemini(contextPrompt, conversation.messages, {
             temperature: 0.4,
             maxOutputTokens: 128,
@@ -451,7 +453,7 @@ async function handleDeleteTask(userId, conversation, correlationId) {
         : 'The user has no tasks.';
 
     const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\n${taskSummary}\n\nInstructions:\n1. If the user identifies a specific task to delete (e.g., by title, number, or relative position like "the first one"), call the propose_deletion tool with its ID.\n2. CRITICAL: NEVER include the task ID (e.g., '69edc...') in your text response. Refer to tasks only by their titles.\n3. If the user just says "delete the task", "delete it", or "remove a task", YOU MUST NOT call the tool yet, even if there is only one task. Instead, respond with text asking "Which task would you like to delete?" and list the available titles for them to choose from.\n4. DO NOT guess which task the user means based on recency or singular availability. Always force the user to identify the task by title or number first.`;
-    console.log('[STAGE]: Task Deletion');
+    // console.log('[STAGE]: Task Deletion');
 
     const tools = [{
         functionDeclarations: [{
@@ -513,7 +515,7 @@ async function handleUpdateTask(userId, conversation, correlationId) {
     }
 
     const systemPrompt = `${DEFAULT_SYSTEM_PROMPT}\n\n${taskSummary}${currentProposalContext}\n\nInstructions:\n1. If the user identifies a specific task to update (e.g., by title, number, or relative position like "the first one") AND specifies what to change, call the propose_update tool.\n2. CRITICAL: NEVER include internal IDs (e.g., '69edc...') in your text response. Refer to tasks only by title.\n3. If the user just says "update", "update the task", "edit", or "change something" without specifying WHICH task or WHAT to change, YOU MUST NOT CALL THE TOOL. Instead, respond with text asking for clarification.\n4. DO NOT guess, assume, or suggest random edits. If the user is ambiguous, ask for clarification.\n5. If there are CURRENT PENDING UPDATES shown above, the user is refining them.\n6. For tags, if the user wants to "remove" a tag, provide the new complete list of tags excluding the removed one.\n7. For assignments, if the user says "assign to me", provide "me" for the assignee field.`;
-    console.log('[STAGE]: Task Update');
+    // console.log('[STAGE]: Task Update');
 
     const tools = [{
         functionDeclarations: [{
