@@ -10,6 +10,7 @@ const producer = kafka.producer();
  */
 
 const connectProducer = async () => {
+    if (process.env.KAFKA_ENABLED !== 'true') return;
     try {
         await producer.connect();
         logger.info('Kafka Producer Connected Successfully');
@@ -22,6 +23,7 @@ const connectProducer = async () => {
 };
 
 const disconnectProducer = async () => {
+    if (process.env.KAFKA_ENABLED !== 'true') return;
     try {
         await producer.disconnect();
         logger.info('Kafka Producer Disconnected');
@@ -40,6 +42,7 @@ const disconnectProducer = async () => {
  */
 
 const produceEvent = async (topic, eventPayload) => {
+    if (process.env.KAFKA_ENABLED !== 'true') return;
     try {
         await producer.send({
             topic,
@@ -76,6 +79,7 @@ const produceEvent = async (topic, eventPayload) => {
  * @param {number} retryCount - How many retries were attempted
  */
 const produceToDLQ = async (originalTopic, originalEvent, error, retryCount) => {
+    if (process.env.KAFKA_ENABLED !== 'true') return;
     const dlqTopic = `${originalTopic}.dlq`;
     const dlqPayload = {
         originalEvent,
