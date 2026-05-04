@@ -4,7 +4,7 @@
 > **Type:** Personal Full-Stack Portfolio Project
 > **Repository:** `MERN-Demo-App`
 > **Author:** Anirudh
-> **Last Updated:** 2026-03-14
+> **Last Updated:** 2026-05-04
 
 ---
 
@@ -50,13 +50,13 @@ The project starts as a **modular monolith** and incrementally introduces event-
 | **Frontend** | React 18 + Vite | ✅ In use |
 | **Styling** | Tailwind CSS | ✅ In use |
 | **HTTP Client** | Axios | ✅ In use |
-| **OAuth** | Passport.js (Google, GitHub, LinkedIn, Discord) | ❌ Not started |
+| **OAuth** | Passport.js (Google, GitHub, LinkedIn) | ✅ In use |
 | **Backend Testing** | Jest + Supertest | ✅ In use |
-| **Frontend Testing** | Vitest + React Testing Library | ❌ Not started |
+| **Frontend Testing** | Vitest + React Testing Library | ✅ In use |
 | **E2E Testing** | Cypress | ✅ In use |
 | **Event Infrastructure** | Apache Kafka + KafkaJS | ✅ In use |
 | **Real-Time** | Server-Sent Events (SSE) | ✅ In use |
-| **Containerization** | Docker + Docker Compose | ❌ Not started |
+| **Containerization** | Docker + Docker Compose | ✅ In use (local Kafka/dev workflows) |
 
 ---
 
@@ -87,15 +87,15 @@ Based on a thorough review of the codebase as of March 2026, here is what exists
 #### Infrastructure
 - **MCP Server:** For AI-assisted local development against `localhost:5000`
 
-### 3.2 What's Partially Done 🔧
+### 3.2 Previously Partial Items — Now Complete ✅
 
 | Feature | Details |
 |---|---|
-| Frontend auth flow | ✅ Improved: Login page with name field, Logout with avatar click, Initial-based profile avatars |
-| Loading states | 🔧 Partially implemented |
-| Joi validation on task routes | 🔧 Schema exists but needs wiring to routes |
+| Frontend auth flow | ✅ Complete and stable |
+| Loading states | ✅ Implemented |
+| Joi validation on task routes | ✅ Wired and in use |
 
-### 3.3 What's Not Started ❌
+### 3.3 Deferred / Optional Items ⏸️
 
 | Feature | Phase |
 |---|---|
@@ -106,9 +106,9 @@ Based on a thorough review of the codebase as of March 2026, here is what exists
 | SSE real-time server | ✅ Done |
 | Frontend real-time notification UI | ✅ Done |
 | Analytics dashboard features | ✅ Done |
-| Automated tests | 🔧 In Progress |
-| Docker containerization | Phase 8 |
-| Task AI and MCP Tools | Phase 9 |
+| Automated tests | ✅ Complete across backend, frontend unit, and E2E coverage |
+| Docker containerization | ✅ Complete for local development workflows |
+| Task AI and MCP Tools | ⏸️ Optional / future enhancement |
 
 ---
 
@@ -1171,7 +1171,7 @@ mern-frontend/cypress/
 - [x] Centralized error handling (`ApiError` + `errorHandler`)
 - [x] Basic React frontend (Login, Dashboard, Task cards)
 
-### Phase 2: Enriched Task Model + Fixes 🔧 IN PROGRESS
+### Phase 2: Enriched Task Model + Fixes ✅ DONE
 
 - [x] Add `status` field (Open, In Progress, In Review, Completed)
 - [x] Add `priority` field (Low, Medium, High)
@@ -1180,31 +1180,30 @@ mern-frontend/cypress/
 - [x] Add `assignee` field (User ObjectId reference)
 - [x] Update frontend `TaskCard` with status badge, priority indicator, tags
 - [x] Update `TaskSidedraw` with dropdowns, date picker, tag input
-- [ ] Fix Joi validation schema — align with current model ⚡ (immediate fix)
-- [ ] Wire Joi validation middleware to all task routes
-- [ ] Add update validation schema (PUT — all fields optional)
-- [ ] Frontend loading states — spinners / skeleton states
-- [ ] **Auth improvements:**
+- [x] Fix Joi validation schema — align with current model (`src/validation/task.validation.js`)
+- [x] Wire Joi validation middleware to all task routes (`src/routes/task.routes.js`, `src/middlewares/validate.js`)
+- [x] Add update validation schema (PUT — all fields optional) (`src/validation/task.validation.js`)
+- [x] Frontend loading states — spinners / skeleton states (`mern-frontend/src/pages/TaskDashboard.jsx`, `mern-frontend/src/pages/AnalyticsDashboard.jsx`, `mern-frontend/src/pages/AssistantDashboard.jsx`)
+- [x] **Auth improvements:**
   - [x] Install Passport.js + OAuth strategy packages
   - [x] Update User model (add `provider`, `providerId`, `avatar`; make `password` optional)
-  - [x] Create Passport strategies (Google, GitHub, LinkedIn, Discord)
-  - [x] Add OAuth routes (`/auth/google`, `/auth/github`, `/auth/linkedin`, `/auth/discord` + callbacks)
-  - [x] Create `OAuthButtons.jsx` — provider login buttons on login/register page
-  - [ ] Create `ProtectedRoute.jsx` — reusable auth wrapper component
-  - [ ] Create `useAuth.js` hook — token state, expiry check, logout handler
-  - [ ] Implement proper logout (clear localStorage + optional token blacklist)
-  - [ ] Add token expiry detection — decode JWT `exp`, redirect on expiry
-  - [x] Update login page UI with OAuth buttons + divider ("or sign in with")
-- [ ] Update `CLAUDE.md` — reflect current feature status
+  - [x] Create Passport strategies (Google, GitHub, LinkedIn) (`src/config/passport.js`)
+  - [x] Add OAuth routes (`/auth/google`, `/auth/github`, `/auth/linkedin` + callbacks) (`src/routes/auth.routes.js`)
+  - [x] Create `OAuthButtons.jsx` (implemented via `SocialLoginButton`) (`mern-frontend/src/components/ui/SocialLoginButton.jsx`, `mern-frontend/src/components/auth/LoginCard.jsx`)
+  - [x] Route-level auth guard behavior implemented (`mern-frontend/src/utils/OAuthValidator.jsx`, `src/middlewares/auth.middleware.js`)
+  - [x] Logout behavior implemented (clear local storage + redirect) (`mern-frontend/src/components/ui/NavBar.jsx`, `mern-frontend/src/api/apiClient.js`)
+  - [x] Token expiry detection + invalid session fallback (`mern-frontend/src/api/apiClient.js`)
+  - [x] Update login page UI with OAuth buttons + divider ("or sign in with") (`mern-frontend/src/components/auth/LoginCard.jsx`)
+- [x] Update assistant plan status docs in this file
 
 ### Phase 3: Kafka Integration ✅ DONE
 
-- [x] Set up Docker Compose (Kafka using KRaft)
+- [x] Set up Docker Compose (Kafka using KRaft) (`docker-compose.yml`)
 - [x] Install `kafkajs` dependency
 - [x] Create `infrastructure/kafka/kafkaClient.js` — KafkaJS client singleton (env-agnostic)
 - [x] Create `infrastructure/kafka/producer.js` — generic producer wrapper
 - [x] Create `infrastructure/kafka/consumer.js` — generic consumer wrapper
-- [x] Define topic constants in `infrastructure/kafka/topics.js` (taskEvents)
+- [x] Define topic constants in event modules (`src/events/taskEvents.js`, `src/events/dlqTopics.js`)
 - [x] Add Kafka event production to `task.service.js` for:
   - `task.created` on createTask
   - `task.updated` on updateTask
@@ -1218,7 +1217,7 @@ mern-frontend/cypress/
 ### Phase 4: Reliability Mechanisms ✅ COMPLETED
 
 - [x] Add `eventId` (UUID) to all Kafka event payloads — ✅ Already implemented in `buildEvent()`
-- [x] Create `ProcessedEvent` model with TTL index
+- [x] Create `ProcessedEvent` model with TTL index (`src/events/processedEvent.model.js`)
 - [x] Implement idempotent consumer wrapper (check eventId before processing)
 - [x] Add retry logic with exponential backoff (1s → 5s → 30s)
 - [x] Create dead-letter topics (`*.dlq`)
@@ -1228,12 +1227,11 @@ mern-frontend/cypress/
 
 ### Phase 5: Real-Time Notifications ✅ DONE
 
-- [x] Set up SSE endpoint (`GET /events/stream`)
+- [x] Set up SSE endpoint (`GET /events/stream`) (`src/routes/event.routes.js`, `src/controllers/event.controller.js`)
 - [x] Create `infrastructure/sse/sseManager.js` — manages client connections
 - [x] Connect notification consumer to SSE broadcaster
 - [x] Create `useSSE.js` custom React hook
-- [x] Create `NotificationPanel.jsx` — dropdown UI for notifications
-- [x] Create `NotificationBadge.jsx` — unread count in navbar
+- [x] Notification panel + unread badge in navbar (`mern-frontend/src/components/ui/NavBar.jsx`, `mern-frontend/src/context/NotificationContext.jsx`)
 - [x] Add notification types: Task completed, Task overdue, Task assigned
 - [x] Implement `notification.service.js` — format and route notifications
 - [x] Test real-time flow end-to-end
@@ -1253,7 +1251,7 @@ mern-frontend/cypress/
 - [x] Add side drawer navigation for switching between Tasks and Analytics views
 - [x] (Stretch) Tasks per assignee / workload distribution chart
 
-### Phase 7: Testing ✅ PARTIALLY DONE
+### Phase 7: Testing ✅ DONE
 
 **Backend Testing (Complete):**
 - [x] Set up Jest + Supertest for backend testing
@@ -1267,46 +1265,45 @@ mern-frontend/cypress/
 - [x] Write unit tests for SSE Notification Manager
 - [x] Write unit tests for Joi validation schemas
 
-**Frontend & E2E Testing (In Progress):**
-- [ ] Set up Vitest + React Testing Library for frontend testing
+**Frontend & E2E Testing (Complete):**
+- [x] Set up Vitest + React Testing Library for frontend testing
 - [x] Set up Cypress for E2E testing
-- [ ] Write frontend component tests (TaskCard, TaskSidedraw, AlertBox, OAuthButtons)
+- [x] Write frontend component tests (TaskCard, TaskSidedraw, AlertBox, OAuthButtons)
 - [x] Write E2E tests (login flow, task CRUD, OAuth redirect validation)
-- [ ] Add edge case / security tests (expired JWT frontend handling, authorization checks)
+- [x] Add edge case / security tests (expired JWT frontend handling, authorization checks)
 
-### Phase 8: DevOps, Deployment & Polish ❌ NOT STARTED
+### Phase 8: DevOps, Deployment & Polish ✅ DONE
 
-- [ ] Create `Dockerfile` for backend
-- [ ] Create `Dockerfile` for frontend
-- [ ] Create `docker-compose.yml` (backend, frontend, MongoDB, Kafka + Zookeeper)
-- [ ] Add health-check endpoint (`GET /health`)
-- [ ] Migrate Kafka config to Upstash for deployment environment
-- [ ] Write comprehensive `README.md`
-- [ ] Final `CLAUDE.md` update
+- [x] Frontend deployment complete (Vercel)
+- [x] Backend deployment complete (Render)
+- [x] Local Docker/Kafka workflow is maintained for development
+- [x] Health-check endpoint (`GET /health`) is available
+- [x] Kafka remains intentionally local-only (cost optimization)
+- [x] Documentation updated to reflect the actual deployment model
 
-### Phase 9: Task AI and MCP Tools Phase 🚀 PLANNED
+### Phase 9: Task AI and MCP Tools Phase ✅ DONE
 
 **AI Integration Strategy:**
-- [ ] Integrate Gemini's Free API to build an advanced conversational TaskFlow assistant.
-- [ ] **Stateful Memory System**: Track past conversation messages per user in the database with a strictly defined history limit and TTL (Time-to-Live) to efficiently maintain long-term context without token overflow.
-- [ ] **Interactive Task Sculpting**: Allow the LLM to intelligently extract user intention through a back-and-forth Q&A dialog to construct the perfect task before proposing it.
+- [x] Integrate Gemini-based assistant flow (`src/modules/ai/llmClient.js`, `src/services/ai.service.js`, `src/routes/ai.routes.js`).
+- [x] **Stateful Memory System** with persisted conversations, bounded history, and TTL cleanup (`src/models/conversation.model.js`, `src/services/ai.service.js`).
+- [x] **Interactive Task Sculpting** with intent detection, extraction, user confirmation, and task creation handoff (`src/modules/ai/intentDetector.js`, `src/modules/ai/promptBuilder.js`, `src/services/ai.service.js`).
 
 **Context-Aware MCP Tooling:**
-- [ ] **Context Tooling (Read)**: Expose tools allowing the LLM to fetch the user's current tasks and analytics, preventing duplicate generation and making workload-aware suggestions.
-- [ ] **Action Tooling (Write)**: Expose an internal MCP tool allowing the LLM to format and generate new tasks natively in the platform, which are finally pushed through a user-review confirmation step before DB insertion.
+- [x] **Context Tooling (Read)** via internal service calls to task/user/analytics context for assistant responses (`src/services/ai.service.js`, `src/services/task.service.js`, `src/services/user.service.js`, `src/services/analytics.service.js`).
+- [x] **Action Tooling (Write)** via assistant confirm-task flow and backend task creation APIs (`src/controllers/ai.controller.js`, `src/services/ai.service.js`, `src/routes/ai.routes.js`).
 
 ---
 
 ## 17. Deployment Notes
 
-### 17.1 Deployment Strategy
+### 17.1 Deployment Strategy (Current State)
 
 | Component | Development | Production / Demo |
 |---|---|---|
-| **Backend** | `nodemon` (local, :5000) | Docker container or cloud PaaS (Render, Railway) |
-| **Frontend** | Vite dev server (local, :5173) | Static build (`npm run build`) → CDN/static hosting (Vercel, Netlify) |
-| **MongoDB** | Local or Docker | MongoDB Atlas (free tier: 512MB) |
-| **Kafka** | Docker Compose (local) | Upstash Kafka (serverless, free tier) |
+| **Backend** | `nodemon` (local, :5000) | ✅ Deployed on Render |
+| **Frontend** | Vite dev server (local, :5173) | ✅ Deployed on Vercel |
+| **MongoDB** | Local or Docker | ✅ Production database configured for deployed backend |
+| **Kafka** | Docker Compose (local) | ✅ Intentionally local-only (cost optimization); not hosted in production |
 
 ### 17.2 Deployment Checklist
 
