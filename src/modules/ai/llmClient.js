@@ -1,6 +1,6 @@
 const logger = require('../../utils/logger');
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 
 function mapRole(role) {
     return role === 'model' ? 'model' : 'user';
